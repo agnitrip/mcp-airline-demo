@@ -18,7 +18,8 @@
   .wrap{max-width:860px;margin:0 auto;padding:40px 22px 80px}
   header{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:26px}
   h1{font-size:30px;margin:0 0 6px;letter-spacing:-.02em}
-  h2{font-size:20px;margin:38px 0 12px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:52px 0 14px;letter-spacing:-.01em}
+  .tabpanel > h2:first-child{margin-top:22px}
   h3{font-size:16px;margin:22px 0 6px}
   p{color:var(--ink)}
   .sub{color:var(--muted);font-size:16px;margin:0}
@@ -34,14 +35,14 @@
     color:var(--muted);border-radius:999px;padding:3px 11px;font-size:12.5px;margin:0 6px 6px 0}
   ul{padding-left:20px}
   li{margin:5px 0}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:17px 19px;margin:26px 0}
   table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14.5px}
   th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
   th{background:var(--panel);color:var(--muted);font-weight:600}
   .beat{font-weight:700}
   .ok{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
   .note{border-left:3px solid var(--warn);background:rgba(242,184,114,.08);
-    padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;color:var(--ink);font-size:14.5px}
+    padding:12px 15px;border-radius:0 8px 8px 0;margin:18px 0;color:var(--ink);font-size:14.5px}
   .cta{display:inline-block;background:var(--accent);color:#0b0e1a;font-weight:700;
     padding:10px 18px;border-radius:10px;margin-top:6px}
   .cta:hover{text-decoration:none;filter:brightness(1.05)}
@@ -60,7 +61,7 @@
   .laptop-banner{border-left:3px solid var(--warn);background:rgba(242,184,114,.10);
     padding:12px 15px;border-radius:0 10px 10px 0;margin:6px 0 6px;font-size:14.5px}
   .laptop-banner b{color:var(--warn)}
-  .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:16px}
   /* ---- interactive simulator ---- */
   .sim{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden;margin:14px 0 6px}
   .sim-tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line)}
@@ -72,9 +73,9 @@
   .chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted);background:var(--code)}
   .chip b{color:var(--ink);font-weight:600}
   .chip.good b{color:var(--good)} .chip.bad b{color:var(--bad)} .chip.warn b{color:var(--warn)}
-  .sim-screen{padding:14px;min-height:240px;max-height:440px;overflow-y:auto;font-size:14px}
+  .sim-screen{padding:16px 16px 18px;min-height:250px;max-height:460px;overflow-y:auto;font-size:14px}
   .sim-empty{color:var(--muted);text-align:center;padding:52px 10px}
-  .row{margin:9px 0;opacity:0;transform:translateY(4px);animation:rise .28s ease forwards}
+  .row{margin:12px 0;opacity:0;transform:translateY(4px);animation:rise .28s ease forwards}
   @keyframes rise{to{opacity:1;transform:none}}
   .bubble{max-width:88%;padding:9px 12px;border-radius:12px;line-height:1.5}
   .bubble.user{margin-left:auto;background:var(--accent);color:#0b0e1a;border-bottom-right-radius:4px}
@@ -145,14 +146,14 @@
   .conn{text-align:center;color:var(--muted);font-size:11px;padding:5px 0}
   .arch-legend{margin-top:12px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 12px;line-height:1.5}
   .arch-legend b{color:var(--warn);font-weight:600}
-  .cap{color:var(--muted);font-size:13px;margin:8px 0 2px}
+  .cap{color:var(--muted);font-size:13px;margin:10px 0 20px}
   td .ok,td .bad,td .warn{font-weight:600}
   /* ---- side-by-side architecture + simulator ---- */
-  .showcase{display:grid;grid-template-columns:minmax(0,290px) minmax(0,1fr);gap:16px;align-items:start;margin:12px 0 6px}
+  .showcase{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,280px);gap:20px;align-items:start;margin:18px 0 16px}
   .showcase-arch{position:sticky;top:12px}
-  .arch-cap{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 7px 2px}
-  .arch-live{display:flex;flex-direction:column}
-  .lnode{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:9px 11px;
+  .arch-cap{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 9px 2px}
+  .arch-live{display:flex;flex-direction:column;gap:10px}
+  .lnode{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 13px;
     transition:border-color .25s,box-shadow .25s,background .25s}
   .lnode.host{border-color:rgba(110,168,254,.4)}
   .lnode.server{background:var(--code)}
@@ -160,7 +161,7 @@
   .lname{font-weight:700;font-size:14px}
   .lsub{color:var(--muted);font-size:11.5px;margin-top:2px;word-break:break-word}
   .lsub.tools{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);opacity:.9;margin-top:3px}
-  .lwire{text-align:center;color:var(--muted);font-size:10.5px;padding:5px 0}
+  .lwire{text-align:center;color:var(--muted);font-size:10.5px;padding:1px 0}
   .lnode.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(110,168,254,.35);background:rgba(110,168,254,.12)}
   .lnode.err{border-color:var(--bad);box-shadow:0 0 0 2px rgba(255,128,149,.35);background:rgba(255,128,149,.12)}
   .arch-toggle{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;cursor:pointer}
@@ -286,12 +287,32 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
 <h2 id="try">See it happen</h2>
 <div class="note">
   <strong>This is a simulation.</strong> It plays scripted, canned data <em>in your browser</em> — no real
-  MCP servers or model calls run here. Watch the architecture on the left light up as each
-  <span class="mcp-tag">MCP tool call</span> fires, and step through with <em>Proceed →</em> so you can follow
-  each call. Untick <em>Animate architecture</em> to auto-play instead. You send the first message and choose
-  whether to book. To run it for real, open the <strong>Run it yourself</strong> tab.
+  MCP servers or model calls run here. By default it auto-plays. Tick <em>Animate architecture</em> to light up
+  the diagram on the right as each <span class="mcp-tag">MCP tool call</span> fires and step through with
+  <em>Proceed →</em>. You send the first message and choose whether to book. To run it for real, open the
+  <strong>Run it yourself</strong> tab.
 </div>
 <div class="showcase">
+  <div class="showcase-sim">
+    <div class="sim">
+      <div class="sim-tabs" id="simTabs">
+        <button class="sim-tab active" data-beat="A">A · happy path</button>
+        <button class="sim-tab" data-beat="B">B · stale source</button>
+        <button class="sim-tab" data-beat="C">C · tool error</button>
+        <button class="sim-tab" data-beat="D">D · guardrail</button>
+      </div>
+      <div class="sim-state" id="simState"></div>
+      <div class="sim-screen" id="simScreen">
+        <div class="sim-empty">Press <strong>▶ Run this beat</strong> to watch the assistant compose the MCP tools.</div>
+      </div>
+      <div class="sim-controls">
+        <button class="sim-run" id="simRun">▶ Run this beat</button>
+        <button class="sim-run proceed" id="simProceed" hidden>Proceed →</button>
+        <label class="arch-toggle"><input type="checkbox" id="animArch"> Animate architecture</label>
+        <span class="sim-point" id="simPoint"></span>
+      </div>
+    </div>
+  </div>
   <div class="showcase-arch">
     <div class="arch-cap">Architecture</div>
     <div class="arch-live" id="archLive">
@@ -310,26 +331,6 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
       <div class="lnode server" id="arch-policies"><span class="ntype">MCP Server → filesystem</span>
         <div class="lname">policies</div><div class="lsub">policy/active · refund · baggage (.md)</div>
         <div class="lsub tools">read_file · list_directory</div></div>
-    </div>
-  </div>
-  <div class="showcase-sim">
-    <div class="sim">
-      <div class="sim-tabs" id="simTabs">
-        <button class="sim-tab active" data-beat="A">A · happy path</button>
-        <button class="sim-tab" data-beat="B">B · stale source</button>
-        <button class="sim-tab" data-beat="C">C · tool error</button>
-        <button class="sim-tab" data-beat="D">D · guardrail</button>
-      </div>
-      <div class="sim-state" id="simState"></div>
-      <div class="sim-screen" id="simScreen">
-        <div class="sim-empty">Press <strong>▶ Run this beat</strong> to watch the assistant compose the MCP tools.</div>
-      </div>
-      <div class="sim-controls">
-        <button class="sim-run" id="simRun">▶ Run this beat</button>
-        <button class="sim-run proceed" id="simProceed" hidden>Proceed →</button>
-        <label class="arch-toggle"><input type="checkbox" id="animArch" checked> Animate architecture</label>
-        <span class="sim-point" id="simPoint"></span>
-      </div>
     </div>
   </div>
 </div>
