@@ -114,20 +114,26 @@
   .composer-send{background:var(--accent);color:#0b0e1a;border:0;border-radius:9px;
     padding:9px 14px;font:700 13px/1 inherit;cursor:pointer;white-space:nowrap}
   .composer-hint{font-size:11.5px;color:var(--muted);margin:2px 2px 0}
-  /* ---- architecture diagram ---- */
+  /* ---- architecture diagram (tiered, component-typed) ---- */
   .arch{margin:16px 0 6px}
-  .arch-node{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:center}
-  .arch-node.host{border-color:rgba(110,168,254,.45)}
-  .arch-node .big{font-weight:700}
-  .arch-node span{display:block;color:var(--muted);font-size:12.5px;margin-top:3px}
-  .arch-arrow{text-align:center;color:var(--muted);font-size:12.5px;padding:9px 0;line-height:1.4}
-  .arch-arrow b{color:var(--accent);font-weight:600}
-  .arch-servers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .arch-server{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
-  .srv-name{font-weight:700}
-  .srv-pkg{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;color:var(--muted);margin:3px 0 9px;word-break:break-word}
-  .srv-back{border-top:1px dashed var(--line);padding-top:9px;font-size:13px}
-  .srv-toggle{color:var(--warn);font-size:11px;margin-top:7px}
+  .tier{max-width:600px;margin:0 auto}
+  .node{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+  .node.host{border-color:rgba(110,168,254,.45)}
+  .node.db,.node.fs{background:var(--code)}
+  .ntype{display:block;font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+  .node.db .ntype,.node.fs .ntype{color:var(--muted)}
+  .nname{font-weight:700;font-size:15px}
+  .ndesc{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .flow{text-align:center;color:var(--muted);font-size:12px;padding:8px 0}
+  .flow b{color:var(--accent);font-weight:600}
+  .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:2px}
+  .col{display:flex;flex-direction:column}
+  .tools{margin-top:8px;border-top:1px dashed var(--line);padding-top:7px}
+  .tools .tlabel{display:block;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .tools .tlist{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:var(--ink)}
+  .conn{text-align:center;color:var(--muted);font-size:11px;padding:5px 0}
+  .arch-legend{margin-top:12px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 12px;line-height:1.5}
+  .arch-legend b{color:var(--warn);font-weight:600}
   .cap{color:var(--muted);font-size:13px;margin:8px 0 2px}
   td .ok,td .bad,td .warn{font-weight:600}
   @media (max-width:640px){
@@ -136,7 +142,7 @@
     table{min-width:520px}          /* keep columns legible; wrapper scrolls */
     pre{font-size:12px}
     .sim-tab{flex-basis:50%;min-width:0} .bubble{max-width:95%}
-    .arch-servers{grid-template-columns:1fr}
+    .cols{grid-template-columns:1fr}
   }
 </style>
 </head>
@@ -246,35 +252,70 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
 <h2>How it's wired</h2>
 <p>One host, three servers, three backends. The host is any MCP client; the model decides which tools to call.</p>
 <div class="arch">
-  <div class="arch-node"><span class="big">🧑 Traveler — Jordan Rivera</span>
-    <span>“Book me a cheap flight somewhere sunny this weekend and use my miles.”</span></div>
-  <div class="arch-arrow">natural language ↓</div>
-  <div class="arch-node host"><span class="big">MCP Host / Client&nbsp;+&nbsp;model</span>
-    <span>Claude Desktop · Claude Code · any MCP-capable client</span></div>
-  <div class="arch-arrow"><b>MCP protocol</b> (JSON-RPC over stdio) ↓ &nbsp;three independent servers</div>
-  <div class="arch-servers">
-    <div class="arch-server">
-      <div class="srv-name">reservations</div>
-      <div class="srv-pkg">mcp-server-sqlite</div>
-      <div class="srv-back">🗄 <code>reservations.db</code><br>flights · airports · bookings</div>
-      <div class="srv-toggle">⇄ use-stale.sh swaps this file</div>
-    </div>
-    <div class="arch-server">
-      <div class="srv-name">loyalty</div>
-      <div class="srv-pkg">mcp-server-sqlite</div>
-      <div class="srv-back">🗄 <code>loyalty.db</code><br>members / miles</div>
-      <div class="srv-toggle">⇄ break-miles.sh corrupts this file</div>
-    </div>
-    <div class="arch-server">
-      <div class="srv-name">policies</div>
-      <div class="srv-pkg">server-filesystem</div>
-      <div class="srv-back">📁 <code>policy/active/</code><br>refund · baggage (.md)</div>
-      <div class="srv-toggle">⇄ use-stale-policy.sh swaps these</div>
+  <div class="tier">
+    <div class="node">
+      <span class="ntype">User</span>
+      <div class="nname">Traveler — Jordan Rivera</div>
+      <div class="ndesc">“Book me a cheap flight somewhere sunny this weekend and use my miles.”</div>
     </div>
   </div>
+  <div class="flow">↓&nbsp;&nbsp;natural language</div>
+  <div class="tier">
+    <div class="node host">
+      <span class="ntype">MCP Host / Client</span>
+      <div class="nname">Desktop app + model</div>
+      <div class="ndesc">Claude Desktop, Claude Code, or any MCP-capable client. The model decides which tools to call.</div>
+    </div>
+  </div>
+  <div class="flow">↓&nbsp;&nbsp;<b>MCP protocol</b> · JSON-RPC over stdio</div>
+  <div class="cols">
+    <div class="col">
+      <div class="node server">
+        <span class="ntype">MCP Server</span>
+        <div class="nname">reservations</div>
+        <div class="ndesc">mcp-server-sqlite</div>
+        <div class="tools"><span class="tlabel">Tools</span><div class="tlist">read_query · write_query</div></div>
+      </div>
+      <div class="conn">↓ reads / writes</div>
+      <div class="node db">
+        <span class="ntype">Database · SQLite</span>
+        <div class="nname">reservations.db</div>
+        <div class="ndesc">flights · airports · bookings</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="node server">
+        <span class="ntype">MCP Server</span>
+        <div class="nname">loyalty</div>
+        <div class="ndesc">mcp-server-sqlite</div>
+        <div class="tools"><span class="tlabel">Tools</span><div class="tlist">read_query</div></div>
+      </div>
+      <div class="conn">↓ reads</div>
+      <div class="node db">
+        <span class="ntype">Database · SQLite</span>
+        <div class="nname">loyalty.db</div>
+        <div class="ndesc">members · miles · tier</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="node server">
+        <span class="ntype">MCP Server</span>
+        <div class="nname">policies</div>
+        <div class="ndesc">server-filesystem</div>
+        <div class="tools"><span class="tlabel">Tools</span><div class="tlist">read_file · list_directory</div></div>
+      </div>
+      <div class="conn">↓ reads</div>
+      <div class="node fs">
+        <span class="ntype">File store</span>
+        <div class="nname">policy/active/</div>
+        <div class="ndesc">refund · baggage (.md)</div>
+      </div>
+    </div>
+  </div>
+  <div class="arch-legend">Each server re-reads its backend on <strong>every call</strong>, so the toggle scripts change
+  behavior with <strong>no restart</strong> — <b>use-stale.sh</b> → reservations, <b>break-miles.sh</b> → loyalty,
+  <b>use-stale-policy.sh</b> → policies.</div>
 </div>
-<p class="cap">Because each server re-reads its backend on every call, the toggle scripts change behavior
-<strong>with no restart</strong>. That flexibility is the point of the demo — and the source of both failures.</p>
 
 <h2 id="try">See it happen — simulator</h2>
 <div class="note">
