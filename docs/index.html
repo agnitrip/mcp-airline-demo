@@ -499,7 +499,7 @@ or as the first message in Claude Code):</p>
   };
   var BEATS = {
     A: {
-      state: {res:["CURRENT","good"], loy:["healthy","good"], asst:["naive","warn"]},
+      state: {res:["CURRENT","good"], loy:["healthy","good"], asst:["no guardrail","warn"]},
       point: {cls:"good", text:"Three off-the-shelf servers composed live — and it confirmed before booking."},
       steps: [
         {t:"user", text:REQ},
@@ -514,7 +514,7 @@ or as the first message in Claude Code):</p>
       ]
     },
     B: {
-      state: {res:["STALE","bad"], loy:["healthy","good"], asst:["naive","warn"]},
+      state: {res:["STALE","bad"], loy:["healthy","good"], asst:["no guardrail","warn"]},
       point: {cls:"bad", text:"Confirming didn't help — you approved the same stale “Sunny” the assistant showed you."},
       steps: [
         {t:"note", text:"You ran ./scripts/use-stale.sh — reservations now serves a snapshot from 5 days ago."},
@@ -531,7 +531,7 @@ or as the first message in Claude Code):</p>
       ]
     },
     C: {
-      state: {res:["CURRENT","good"], loy:["BROKEN","bad"], asst:["naive","warn"]},
+      state: {res:["CURRENT","good"], loy:["BROKEN","bad"], asst:["no guardrail","warn"]},
       point: {cls:"bad", text:"You want fail closed, not fail open — there's money on the line."},
       steps: [
         {t:"note", text:"You ran ./scripts/break-miles.sh — the loyalty DB was swapped for a non-database file."},
