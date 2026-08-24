@@ -149,7 +149,8 @@
   .cap{color:var(--muted);font-size:13px;margin:10px 0 20px}
   td .ok,td .bad,td .warn{font-weight:600}
   /* ---- side-by-side architecture + simulator ---- */
-  .showcase{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,280px);gap:20px;align-items:start;margin:18px 0 16px}
+  .showcase{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);gap:22px;align-items:start;
+    width:min(1180px,94vw);margin:18px 0 18px calc(50% - min(590px,47vw))}
   .showcase-arch{position:sticky;top:12px}
   .arch-cap{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 9px 2px}
   .arch-live{display:flex;flex-direction:column;gap:10px}
@@ -162,14 +163,16 @@
   .lsub{color:var(--muted);font-size:11.5px;margin-top:2px;word-break:break-word}
   .lsub.tools{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);opacity:.9;margin-top:3px}
   .lwire{text-align:center;color:var(--muted);font-size:10.5px;padding:1px 0}
+  .lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   .lane{display:flex;flex-direction:column;gap:6px;padding:9px;border:1px dashed var(--line);border-radius:12px}
   .lwire.sm{font-size:10px;padding:0;opacity:.85}
   .lnode.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(110,168,254,.35);background:rgba(110,168,254,.12)}
   .lnode.err{border-color:var(--bad);box-shadow:0 0 0 2px rgba(255,128,149,.35);background:rgba(255,128,149,.12)}
   .arch-toggle{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;cursor:pointer}
   .arch-toggle input{accent-color:var(--accent);margin:0}
-  @media (max-width:760px){ .showcase{grid-template-columns:1fr} .showcase-arch{position:static} }
+  @media (max-width:980px){ .showcase{grid-template-columns:1fr} .showcase-arch{position:static} }
   @media (max-width:640px){
+    .lanes{grid-template-columns:1fr}
     .wrap{padding:26px 15px 60px}
     h1{font-size:25px} h2{font-size:18px}
     table{min-width:520px}          /* keep columns legible; wrapper scrolls */
@@ -323,8 +326,9 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
       <div class="lwire">↓ natural language</div>
       <div class="lnode host" data-node="host"><span class="ntype">MCP Host + model</span>
         <div class="lname">any MCP client</div><div class="lsub">chooses which tools to call</div></div>
-      <div class="lwire">↓ MCP · JSON-RPC / stdio</div>
+      <div class="lwire">↓ MCP · JSON-RPC / stdio · fans out to 3 servers</div>
 
+      <div class="lanes">
       <div class="lane">
         <div class="lnode server" data-node="reservations"><span class="ntype">MCP Server</span>
           <div class="lname">reservations</div><div class="lsub">mcp-server-sqlite</div>
@@ -350,6 +354,7 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
         <div class="lwire sm">↓ reads</div>
         <div class="lnode fs" data-node="policies"><span class="ntype">File store</span>
           <div class="lname">policy/active/</div><div class="lsub">refund · baggage (.md)</div></div>
+      </div>
       </div>
     </div>
   </div>
