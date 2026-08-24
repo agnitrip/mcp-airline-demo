@@ -100,6 +100,20 @@
     font:600 13px/1 inherit;cursor:pointer;background:var(--code);color:var(--ink)}
   .choice-btn.book{background:var(--accent);color:#0b0e1a;border-color:transparent}
   .choice-btn:hover{filter:brightness(1.08)}
+  .tool-top{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+  .mcp-tag{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--accent);background:rgba(110,168,254,.12);border:1px solid rgba(110,168,254,.35);
+    border-radius:5px;padding:1px 6px}
+  .tool.err .mcp-tag{color:var(--bad);background:rgba(255,128,149,.12);border-color:rgba(255,128,149,.35)}
+  .sys{font-size:11.5px;color:var(--muted)}
+  .sys b{color:var(--ink);font-weight:600}
+  .composer-row{display:flex;gap:8px;margin:8px 0 2px}
+  .composer-in{flex:1;min-width:0;background:var(--code);border:1px solid var(--line);border-radius:9px;
+    padding:9px 11px;color:var(--ink);font:14px/1.4 inherit}
+  .composer-in:focus{outline:none;border-color:var(--accent)}
+  .composer-send{background:var(--accent);color:#0b0e1a;border:0;border-radius:9px;
+    padding:9px 14px;font:700 13px/1 inherit;cursor:pointer;white-space:nowrap}
+  .composer-hint{font-size:11.5px;color:var(--muted);margin:2px 2px 0}
   @media (max-width:640px){
     .wrap{padding:26px 15px 60px}
     h1{font-size:25px} h2{font-size:18px}
@@ -147,8 +161,10 @@ between two questions and the next answer changes — no restart, no redeploy.</
 <div class="note">
   <strong>This is a simulation.</strong> It plays scripted, canned data <em>in your browser</em> — no real
   MCP servers and no model calls run here. It mirrors what the live demo produces so you can watch all four
-  beats on any device, including your phone. The assistant asks before it books — <strong>you</strong> click
-  <em>Book it</em> or <em>Search something else</em>. To run it for real, follow the steps below.
+  beats on any device, including your phone. <strong>You</strong> send the first message, and each
+  <span class="mcp-tag">MCP tool call</span> line is a call to a separate backend system (SQLite / filesystem).
+  The assistant also asks before it books — you click <em>Book it</em> or <em>Search something else</em>.
+  To run it for real, follow the steps below.
 </div>
 <div class="sim">
   <div class="sim-tabs" id="simTabs">
@@ -281,6 +297,12 @@ cheat-sheet are in
 <script>
 (function(){
   var REQ = "Book me a cheap flight somewhere sunny this weekend and use my miles. I'm Jordan Rivera.";
+  // maps each MCP server to the backend system it fronts (shown on every tool call)
+  var SYS = {
+    reservations: "SQLite DB · uvx",
+    loyalty:      "SQLite DB · uvx",
+    policies:     "filesystem · npx"
+  };
   var BEATS = {
     A: {
       state: {res:["CURRENT","good"], loy:["healthy","good"], asst:["naive","warn"]},
@@ -390,7 +412,8 @@ cheat-sheet are in
     var greet = {t:"greet", text:"Hi! I'm Ava, your airline booking assistant. Where are we headed today — how can I help?"};
     var gi = -1;
     for(var k=0;k<base.length;k++){ if(base[k].t==="user"){ gi=k; break; } }
-    if(gi<0){ base.unshift(greet); } else { base.splice(gi,0,greet); }
+    if(gi<0){ base.unshift(greet); }
+    else { base[gi] = {t:"user", text:base[gi].text, send:true}; base.splice(gi,0,greet); }  // first msg = user sends it
     return base;
   }
 
@@ -426,18 +449,49 @@ cheat-sheet are in
     }
 
     function playStep(step, done){
+      // first user message: prefill a composer and wait for the user to send it
+      if(step.t==="user" && step.send){
+        var crow=el("div","row composer-row");
+        var inp=document.createElement("input");
+        inp.type="text"; inp.className="composer-in"; inp.value=step.text;
+        inp.setAttribute("aria-label","Your message");
+        var snd=el("button","composer-send","Send ➤");
+        crow.appendChild(inp); crow.appendChild(snd);
+        screen.appendChild(crow);
+        var hint=el("div","composer-hint","Press Send (or Enter) to send your message.");
+        screen.appendChild(hint); scrollDown();
+        if(!reduced){ try{ inp.focus(); }catch(e){} }
+        var sent=false;
+        function doSend(){
+          if(sent||token!==runToken) return; sent=true;
+          var txt=(inp.value||step.text).trim()||step.text;
+          if(crow.parentNode) crow.parentNode.removeChild(crow);
+          if(hint.parentNode) hint.parentNode.removeChild(hint);
+          var ur=el("div","row"); ur.appendChild(el("div","bubble user",txt));
+          screen.appendChild(ur); scrollDown();
+          setTimeout(done, reduced?30:340);
+        }
+        snd.addEventListener("click", doSend);
+        inp.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); doSend(); } });
+        return;
+      }
       // tool call: show the header + a spinner, then reveal the result after "latency"
       if(step.t==="tool"){
         var row=el("div","row"), box=el("div","tool");
-        var hd=el("div","hd","→ "+step.server+" · "+step.act);
+        var top=el("div","tool-top");
+        top.appendChild(el("span","mcp-tag","MCP tool call"));
+        var sys=el("span","sys"); sys.appendChild(el("b",null,step.server));
+        sys.appendChild(document.createTextNode(" → " + (SYS[step.server]||"backend system")));
+        top.appendChild(sys); box.appendChild(top);
+        var hd=el("div","hd","→ "+step.act);
         var res=el("span","res"); box.appendChild(hd); box.appendChild(res);
         row.appendChild(box); screen.appendChild(row); scrollDown();
-        if(reduced){ res.textContent=step.res; if(step.err){box.classList.add("err");hd.textContent="✕ "+step.server+" · "+step.act;} return done(); }
+        if(reduced){ res.textContent=step.res; if(step.err){box.classList.add("err");hd.textContent="✕ "+step.act;} return done(); }
         res.appendChild(el("span","spin"));
         setTimeout(function(){
           if(token!==runToken) return;
           res.textContent=step.res;
-          if(step.err){ box.classList.add("err"); hd.textContent="✕ "+step.server+" · "+step.act; }
+          if(step.err){ box.classList.add("err"); hd.textContent="✕ "+step.act; }
           scrollDown(); done();
         }, 820);
         return;
