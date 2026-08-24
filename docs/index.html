@@ -50,11 +50,47 @@
   .laptop{border-left:3px solid var(--accent);background:rgba(110,168,254,.10);
     padding:11px 14px;border-radius:0 8px 8px 0;margin:16px 0 4px;font-size:14.5px}
   .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* ---- interactive simulator ---- */
+  .sim{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden;margin:14px 0 6px}
+  .sim-tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .sim-tab{flex:1 1 auto;min-width:120px;background:transparent;border:0;border-right:1px solid var(--line);
+    color:var(--muted);padding:11px 10px;font:600 13.5px/1.2 inherit;cursor:pointer}
+  .sim-tab:last-child{border-right:0}
+  .sim-tab.active{background:var(--bg);color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}
+  .sim-state{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:12.5px}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted);background:var(--code)}
+  .chip b{color:var(--ink);font-weight:600}
+  .chip.good b{color:var(--good)} .chip.bad b{color:var(--bad)} .chip.warn b{color:var(--warn)}
+  .sim-screen{padding:14px;min-height:240px;max-height:440px;overflow-y:auto;font-size:14px}
+  .sim-empty{color:var(--muted);text-align:center;padding:52px 10px}
+  .row{margin:9px 0;opacity:0;transform:translateY(4px);animation:rise .28s ease forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .bubble{max-width:88%;padding:9px 12px;border-radius:12px;line-height:1.5}
+  .bubble.user{margin-left:auto;background:var(--accent);color:#0b0e1a;border-bottom-right-radius:4px}
+  .bubble.asst{background:var(--code);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .bubble.asst.good{border-color:rgba(87,217,163,.55)}
+  .bubble.asst.bad{border-color:rgba(255,128,149,.55)}
+  .tool{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
+    background:var(--code);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .tool .hd{color:var(--accent);font-weight:600}
+  .tool.err .hd{color:var(--bad)}
+  .tool .res{color:var(--muted);margin-top:3px;display:block}
+  .tool.err .res{color:var(--bad)}
+  .think{color:var(--muted);font-style:italic;font-size:13px;padding-left:4px}
+  .divider{color:var(--ink);font-weight:700;font-size:13px;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}
+  .guard{border-left:3px solid var(--warn);background:rgba(242,184,114,.08);padding:7px 11px;border-radius:0 8px 8px 0;font-size:13px}
+  .reality{border-left:3px solid var(--bad);background:rgba(255,128,149,.09);padding:7px 11px;border-radius:0 8px 8px 0;font-size:13px}
+  .sim-controls{display:flex;align-items:center;gap:14px;padding:12px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .sim-run{background:var(--accent);color:#0b0e1a;border:0;border-radius:9px;padding:9px 16px;font:700 14px/1 inherit;cursor:pointer}
+  .sim-run:disabled{opacity:.5;cursor:default}
+  .sim-point{color:var(--muted);font-size:13.5px}
+  .sim-point b.good{color:var(--good)} .sim-point b.bad{color:var(--bad)}
   @media (max-width:640px){
     .wrap{padding:26px 15px 60px}
     h1{font-size:25px} h2{font-size:18px}
     table{min-width:520px}          /* keep columns legible; wrapper scrolls */
     pre{font-size:12px}
+    .sim-tab{flex-basis:50%;min-width:0} .bubble{max-width:95%}
   }
 </style>
 </head>
@@ -91,6 +127,29 @@
 </div>
 <p>Each server reads its data <strong>fresh on every call</strong>. That is the whole trick: change a file
 between two questions and the next answer changes — no restart, no redeploy.</p>
+
+<h2 id="try">See it happen — simulator</h2>
+<div class="note">
+  <strong>This is a simulation.</strong> It plays scripted, canned data <em>in your browser</em> — no real
+  MCP servers and no model calls run here. It mirrors what the live demo produces so you can watch all four
+  beats on any device, including your phone. To run it for real, follow the steps below.
+</div>
+<div class="sim">
+  <div class="sim-tabs" id="simTabs">
+    <button class="sim-tab active" data-beat="A">A · happy path</button>
+    <button class="sim-tab" data-beat="B">B · stale source</button>
+    <button class="sim-tab" data-beat="C">C · tool error</button>
+    <button class="sim-tab" data-beat="D">D · guardrail</button>
+  </div>
+  <div class="sim-state" id="simState"></div>
+  <div class="sim-screen" id="simScreen">
+    <div class="sim-empty">Press <strong>▶ Run this beat</strong> to watch the assistant compose the MCP tools.</div>
+  </div>
+  <div class="sim-controls">
+    <button class="sim-run" id="simRun">▶ Run this beat</button>
+    <span class="sim-point" id="simPoint"></span>
+  </div>
+</div>
 
 <h2>Prerequisites</h2>
 <ul>
@@ -202,5 +261,164 @@ cheat-sheet are in
 </footer>
 
 </div>
+
+<script>
+(function(){
+  var REQ = "Book me a cheap flight somewhere sunny this weekend and use my miles. I'm Jordan Rivera.";
+  var BEATS = {
+    A: {
+      state: {res:["CURRENT","good"], loy:["healthy","good"], asst:["naive","warn"]},
+      point: {cls:"good", text:"Three off-the-shelf servers composed live — no glue code."},
+      steps: [
+        {t:"user", text:REQ},
+        {t:"tool", server:"reservations", act:"read_query — weekend flights + airport weather",
+         res:"SEA $118 Rain · PHX $129 Storm · SAN $149 Sunny · PSP $169 Sunny · LAS $176 Sunny  (all as_of today)"},
+        {t:"think", text:"cheapest that's actually sunny → San Diego. Skips Seattle (rain) and Phoenix (storm)."},
+        {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", res:"45,000 miles · Gold  ✓"},
+        {t:"tool", server:"reservations", act:"write_query — insert booking BKG-6001", res:"confirmed  ✓"},
+        {t:"answer", cls:"good", text:"Booked AA88 to San Diego — sunny, $149 — 12,000 miles applied."}
+      ]
+    },
+    B: {
+      state: {res:["STALE","bad"], loy:["healthy","good"], asst:["naive","warn"]},
+      point: {cls:"bad", text:"A right-sounding answer built on a source nobody re-checked."},
+      steps: [
+        {t:"note", text:"You ran ./scripts/use-stale.sh — reservations now serves a snapshot from 5 days ago."},
+        {t:"user", text:REQ},
+        {t:"tool", server:"reservations", act:"read_query — weekend flights + airport weather",
+         res:"PHX $129 Sunny (weather_as_of 2026-08-17) · SAN $149 Sunny · SEA $118 Rain · …"},
+        {t:"think", text:"cheapest sunny → Phoenix $129."},
+        {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", res:"45,000 miles · Gold  ✓"},
+        {t:"tool", server:"reservations", act:"write_query — insert booking BKG-6002", res:"confirmed  ✓"},
+        {t:"answer", cls:"bad", text:"Booked DL455 to Phoenix — sunny, $129 — 12,000 miles applied."},
+        {t:"reality", text:"Reality: Phoenix is under a storm right now. The weather field was 5 days stale (weather_as_of = 2026-08-17). Right reasoning, dead source."}
+      ]
+    },
+    C: {
+      state: {res:["CURRENT","good"], loy:["BROKEN","bad"], asst:["naive","warn"]},
+      point: {cls:"bad", text:"You want fail closed, not fail open — there's money on the line."},
+      steps: [
+        {t:"note", text:"You ran ./scripts/break-miles.sh — the loyalty DB was swapped for a non-database file."},
+        {t:"user", text:REQ},
+        {t:"tool", server:"reservations", act:"read_query — weekend flights + airport weather",
+         res:"SAN $149 Sunny (as_of today)  ✓"},
+        {t:"think", text:"cheapest sunny → San Diego."},
+        {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", err:true, res:"✕ ERROR: file is not a database"},
+        {t:"answer", cls:"bad", text:"Booked AA88 to San Diego, $149 — 12,000 miles applied. (Couldn't reach loyalty; proceeding.)"},
+        {t:"reality", text:"It treated “couldn't check the miles” as “nothing blocking” and booked anyway — fail OPEN."}
+      ]
+    },
+    D: {
+      state: {res:["STALE / BROKEN","bad"], loy:["BROKEN","bad"], asst:["guardrailed","good"]},
+      point: {cls:"good", text:"Quote your source. Fail closed. A prompt rule here; code in production."},
+      steps: [
+        {t:"note", text:"Same broken tool + same stale data. Only change: the guardrailed prompt (quote your source, fail closed)."},
+        {t:"divider", text:"Re-run B — stale weather"},
+        {t:"user", text:REQ},
+        {t:"tool", server:"reservations", act:"read_query — weekend flights + airport weather",
+         res:"PHX $129 Sunny — weather_as_of 2026-08-17"},
+        {t:"guard", text:"weather_as_of is 5 days old (> 2-day limit) → STALE. Cannot rely on it."},
+        {t:"answer", cls:"good", text:"NOT BOOKED. Phoenix weather is 5 days stale (reservations, as_of 2026-08-17). I won't book on unverified conditions — refresh the snapshot or confirm current weather."},
+        {t:"divider", text:"Re-run C — loyalty error"},
+        {t:"user", text:REQ},
+        {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", err:true, res:"✕ ERROR: file is not a database"},
+        {t:"guard", text:"required fact (miles balance) could not be verified from loyalty."},
+        {t:"answer", cls:"good", text:"NOT BOOKED. The loyalty server errored — I can't confirm your miles, so I'm failing closed rather than booking."}
+      ]
+    }
+  };
+
+  var screen = document.getElementById("simScreen");
+  var stateBar = document.getElementById("simState");
+  var runBtn = document.getElementById("simRun");
+  var pointEl = document.getElementById("simPoint");
+  var tabs = document.getElementById("simTabs");
+  var current = "A";
+  var runToken = 0;
+  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function el(tag, cls, text){ var e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e; }
+
+  function renderState(beat){
+    var s = BEATS[beat].state;
+    stateBar.innerHTML = "";
+    var map = [["reservations", s.res], ["loyalty", s.loy], ["assistant", s.asst]];
+    map.forEach(function(m){
+      var c = el("span", "chip " + m[1][1]);
+      c.appendChild(document.createTextNode(m[0] + ": "));
+      c.appendChild(el("b", null, m[1][0]));
+      stateBar.appendChild(c);
+    });
+  }
+
+  function stepNode(step){
+    if(step.t==="user"){ var r=el("div","row"); r.appendChild(el("div","bubble user", step.text)); return r; }
+    if(step.t==="answer"){ var r=el("div","row"); r.appendChild(el("div","bubble asst "+step.cls, step.text)); return r; }
+    if(step.t==="note"){ var r=el("div","row"); r.appendChild(el("div","think", "$ " + step.text)); return r; }
+    if(step.t==="think"){ var r=el("div","row"); r.appendChild(el("div","think", "↳ " + step.text)); return r; }
+    if(step.t==="divider"){ var r=el("div","row"); r.appendChild(el("div","divider", step.text)); return r; }
+    if(step.t==="guard"){ var r=el("div","row"); r.appendChild(el("div","guard", "🛡 " + step.text)); return r; }
+    if(step.t==="reality"){ var r=el("div","row"); r.appendChild(el("div","reality", step.text)); return r; }
+    if(step.t==="tool"){
+      var r=el("div","row");
+      var box=el("div","tool"+(step.err?" err":""));
+      box.appendChild(el("div","hd", (step.err?"✕":"→")+" "+step.server+" · "+step.act));
+      box.appendChild(el("span","res", step.res));
+      r.appendChild(box); return r;
+    }
+    var r=el("div","row"); r.appendChild(el("div",null,step.text||"")); return r;
+  }
+
+  function run(beat){
+    var token = ++runToken;
+    var steps = BEATS[beat].steps;
+    screen.innerHTML = "";
+    pointEl.innerHTML = "";
+    runBtn.disabled = true;
+    runBtn.textContent = "Running…";
+    var i = 0;
+    function next(){
+      if(token !== runToken) return;                 // a newer run/tab took over
+      if(i >= steps.length){
+        var p = BEATS[beat].point;
+        pointEl.innerHTML = "";
+        pointEl.appendChild(el("b", p.cls, "Point: "));
+        pointEl.appendChild(document.createTextNode(p.text));
+        runBtn.disabled = false;
+        runBtn.textContent = "↻ Replay";
+        return;
+      }
+      screen.appendChild(stepNode(steps[i]));
+      screen.scrollTop = screen.scrollHeight;
+      i++;
+      var delay = reduced ? 60 : (steps[i-1] && steps[i-1].t==="user" ? 360 : 720);
+      setTimeout(next, delay);
+    }
+    next();
+  }
+
+  function selectBeat(beat){
+    current = beat;
+    runToken++;                                       // cancel any in-flight run
+    [].forEach.call(tabs.children, function(b){ b.classList.toggle("active", b.getAttribute("data-beat")===beat); });
+    renderState(beat);
+    screen.innerHTML = "";
+    var empty = el("div","sim-empty");
+    empty.innerHTML = "Press <strong>▶ Run this beat</strong> to watch the assistant compose the MCP tools.";
+    screen.appendChild(empty);
+    pointEl.innerHTML = "";
+    runBtn.disabled = false;
+    runBtn.textContent = "▶ Run this beat";
+  }
+
+  tabs.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".sim-tab") : null;
+    if(b) selectBeat(b.getAttribute("data-beat"));
+  });
+  runBtn.addEventListener("click", function(){ run(current); });
+
+  renderState("A");
+})();
+</script>
 </body>
 </html>
