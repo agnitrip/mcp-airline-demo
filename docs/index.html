@@ -162,6 +162,8 @@
   .lsub{color:var(--muted);font-size:11.5px;margin-top:2px;word-break:break-word}
   .lsub.tools{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);opacity:.9;margin-top:3px}
   .lwire{text-align:center;color:var(--muted);font-size:10.5px;padding:1px 0}
+  .lane{display:flex;flex-direction:column;gap:6px;padding:9px;border:1px dashed var(--line);border-radius:12px}
+  .lwire.sm{font-size:10px;padding:0;opacity:.85}
   .lnode.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(110,168,254,.35);background:rgba(110,168,254,.12)}
   .lnode.err{border-color:var(--bad);box-shadow:0 0 0 2px rgba(255,128,149,.35);background:rgba(255,128,149,.12)}
   .arch-toggle{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;cursor:pointer}
@@ -316,21 +318,39 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
   <div class="showcase-arch">
     <div class="arch-cap">Architecture</div>
     <div class="arch-live" id="archLive">
-      <div class="lnode" id="arch-user"><span class="ntype">User</span>
+      <div class="lnode" data-node="user"><span class="ntype">User</span>
         <div class="lname">Traveler — Jordan Rivera</div></div>
       <div class="lwire">↓ natural language</div>
-      <div class="lnode host" id="arch-host"><span class="ntype">MCP Host + model</span>
+      <div class="lnode host" data-node="host"><span class="ntype">MCP Host + model</span>
         <div class="lname">any MCP client</div><div class="lsub">chooses which tools to call</div></div>
       <div class="lwire">↓ MCP · JSON-RPC / stdio</div>
-      <div class="lnode server" id="arch-reservations"><span class="ntype">MCP Server → SQLite</span>
-        <div class="lname">reservations</div><div class="lsub">reservations.db · flights · airports · bookings</div>
-        <div class="lsub tools">read_query · write_query</div></div>
-      <div class="lnode server" id="arch-loyalty"><span class="ntype">MCP Server → SQLite</span>
-        <div class="lname">loyalty</div><div class="lsub">loyalty.db · members · miles</div>
-        <div class="lsub tools">read_query</div></div>
-      <div class="lnode server" id="arch-policies"><span class="ntype">MCP Server → filesystem</span>
-        <div class="lname">policies</div><div class="lsub">policy/active · refund · baggage (.md)</div>
-        <div class="lsub tools">read_file · list_directory</div></div>
+
+      <div class="lane">
+        <div class="lnode server" data-node="reservations"><span class="ntype">MCP Server</span>
+          <div class="lname">reservations</div><div class="lsub">mcp-server-sqlite</div>
+          <div class="lsub tools">read_query · write_query</div></div>
+        <div class="lwire sm">↓ reads / writes</div>
+        <div class="lnode db" data-node="reservations"><span class="ntype">Database · SQLite</span>
+          <div class="lname">reservations.db</div><div class="lsub">flights · airports · bookings</div></div>
+      </div>
+
+      <div class="lane">
+        <div class="lnode server" data-node="loyalty"><span class="ntype">MCP Server</span>
+          <div class="lname">loyalty</div><div class="lsub">mcp-server-sqlite</div>
+          <div class="lsub tools">read_query</div></div>
+        <div class="lwire sm">↓ reads</div>
+        <div class="lnode db" data-node="loyalty"><span class="ntype">Database · SQLite</span>
+          <div class="lname">loyalty.db</div><div class="lsub">members · miles · tier</div></div>
+      </div>
+
+      <div class="lane">
+        <div class="lnode server" data-node="policies"><span class="ntype">MCP Server</span>
+          <div class="lname">policies</div><div class="lsub">server-filesystem</div>
+          <div class="lsub tools">read_file · list_directory</div></div>
+        <div class="lwire sm">↓ reads</div>
+        <div class="lnode fs" data-node="policies"><span class="ntype">File store</span>
+          <div class="lname">policy/active/</div><div class="lsub">refund · baggage (.md)</div></div>
+      </div>
     </div>
   </div>
 </div>
@@ -552,16 +572,18 @@ cheat-sheet are in
 
   // live architecture highlighting (optional, toggled by #animArch)
   var animArchEl = document.getElementById("animArch");
-  var ARCH_IDS = { reservations:"arch-reservations", loyalty:"arch-loyalty", policies:"arch-policies" };
   function archClearAll(){
     var live = document.getElementById("archLive"); if(!live) return;
     var ns = live.querySelectorAll(".lnode");
     for(var j=0;j<ns.length;j++){ ns[j].classList.remove("active","err"); }
   }
-  function archHit(id, isErr){
-    if(!animArchEl || !animArchEl.checked || !id) return;
+  // highlight every box in a lane (server + its backend share data-node)
+  function archHit(name, isErr){
+    if(!animArchEl || !animArchEl.checked || !name) return;
     archClearAll();
-    var n = document.getElementById(id); if(n) n.classList.add(isErr?"err":"active");
+    var live = document.getElementById("archLive"); if(!live) return;
+    var els = live.querySelectorAll('[data-node="'+name+'"]');
+    for(var k=0;k<els.length;k++){ els[k].classList.add(isErr?"err":"active"); }
   }
   if(animArchEl){ animArchEl.addEventListener("change", function(){ if(!animArchEl.checked) archClearAll(); }); }
 
@@ -655,7 +677,7 @@ cheat-sheet are in
           if(crow.parentNode) crow.parentNode.removeChild(crow);
           if(hint.parentNode) hint.parentNode.removeChild(hint);
           var ur=el("div","row"); ur.appendChild(el("div","bubble user",txt));
-          screen.appendChild(ur); scrollDown(); archHit("arch-user");
+          screen.appendChild(ur); scrollDown(); archHit("user");
           setTimeout(done, reduced?30:340);
         }
         snd.addEventListener("click", doSend);
@@ -672,7 +694,7 @@ cheat-sheet are in
         top.appendChild(sys); box.appendChild(top);
         var hd=el("div","hd","→ "+step.act);
         var res=el("span","res"); box.appendChild(hd); box.appendChild(res);
-        row.appendChild(box); screen.appendChild(row); scrollDown(); archHit(ARCH_IDS[step.server], step.err);
+        row.appendChild(box); screen.appendChild(row); scrollDown(); archHit(step.server, step.err);
         if(reduced){ res.textContent=step.res; if(step.err){box.classList.add("err");hd.textContent="✕ "+step.act;} return done(); }
         res.appendChild(el("span","spin"));
         setTimeout(function(){
@@ -689,7 +711,7 @@ cheat-sheet are in
         var cls="bubble asst"+(step.t==="greet"?" greet":(" "+step.cls));
         var b=el("div",cls);
         b.appendChild(el("span","who","Ava · airline assistant"));
-        row2.appendChild(b); screen.appendChild(row2); scrollDown(); archHit("arch-host");
+        row2.appendChild(b); screen.appendChild(row2); scrollDown(); archHit("host");
         if(reduced){ b.appendChild(document.createTextNode(step.text)); return done(); }
         var typing=el("span","typing");
         typing.appendChild(el("i")); typing.appendChild(el("i")); typing.appendChild(el("i"));
