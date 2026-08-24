@@ -95,6 +95,11 @@
   @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
   .bubble.asst.greet{color:var(--ink)}
   .bubble.asst .who{display:block;color:var(--muted);font-size:11.5px;margin-bottom:2px;font-weight:600}
+  .choice-row{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 2px}
+  .choice-btn{border:1px solid var(--line);border-radius:9px;padding:8px 13px;
+    font:600 13px/1 inherit;cursor:pointer;background:var(--code);color:var(--ink)}
+  .choice-btn.book{background:var(--accent);color:#0b0e1a;border-color:transparent}
+  .choice-btn:hover{filter:brightness(1.08)}
   @media (max-width:640px){
     .wrap{padding:26px 15px 60px}
     h1{font-size:25px} h2{font-size:18px}
@@ -142,7 +147,8 @@ between two questions and the next answer changes — no restart, no redeploy.</
 <div class="note">
   <strong>This is a simulation.</strong> It plays scripted, canned data <em>in your browser</em> — no real
   MCP servers and no model calls run here. It mirrors what the live demo produces so you can watch all four
-  beats on any device, including your phone. To run it for real, follow the steps below.
+  beats on any device, including your phone. The assistant asks before it books — <strong>you</strong> click
+  <em>Book it</em> or <em>Search something else</em>. To run it for real, follow the steps below.
 </div>
 <div class="sim">
   <div class="sim-tabs" id="simTabs">
@@ -278,20 +284,22 @@ cheat-sheet are in
   var BEATS = {
     A: {
       state: {res:["CURRENT","good"], loy:["healthy","good"], asst:["naive","warn"]},
-      point: {cls:"good", text:"Three off-the-shelf servers composed live — no glue code."},
+      point: {cls:"good", text:"Three off-the-shelf servers composed live — and it confirmed before booking."},
       steps: [
         {t:"user", text:REQ},
         {t:"tool", server:"reservations", act:"read_query — weekend flights + airport weather",
          res:"SEA $118 Rain · PHX $129 Storm · SAN $149 Sunny · PSP $169 Sunny · LAS $176 Sunny  (all as_of today)"},
         {t:"think", text:"cheapest that's actually sunny → San Diego. Skips Seattle (rain) and Phoenix (storm)."},
         {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", res:"45,000 miles · Gold  ✓"},
+        {t:"answer", cls:"", text:"Here's what I found: AA88 to San Diego — sunny, $149, and I can apply 12,000 of your 45,000 miles. Shall I book it?"},
+        {t:"choice"},
         {t:"tool", server:"reservations", act:"write_query — insert booking BKG-6001", res:"confirmed  ✓"},
-        {t:"answer", cls:"good", text:"Booked AA88 to San Diego — sunny, $149 — 12,000 miles applied."}
+        {t:"answer", cls:"good", text:"Booked AA88 to San Diego — sunny, $149 — 12,000 miles applied. Confirmation BKG-6001."}
       ]
     },
     B: {
       state: {res:["STALE","bad"], loy:["healthy","good"], asst:["naive","warn"]},
-      point: {cls:"bad", text:"A right-sounding answer built on a source nobody re-checked."},
+      point: {cls:"bad", text:"Confirming didn't help — you approved the same stale “Sunny” the assistant showed you."},
       steps: [
         {t:"note", text:"You ran ./scripts/use-stale.sh — reservations now serves a snapshot from 5 days ago."},
         {t:"user", text:REQ},
@@ -299,9 +307,11 @@ cheat-sheet are in
          res:"PHX $129 Sunny (weather_as_of 2026-08-17) · SAN $149 Sunny · SEA $118 Rain · …"},
         {t:"think", text:"cheapest sunny → Phoenix $129."},
         {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", res:"45,000 miles · Gold  ✓"},
+        {t:"answer", cls:"", text:"Here's what I found: DL455 to Phoenix — showing sunny, $129, and I can apply 12,000 miles. Shall I book it?"},
+        {t:"choice"},
         {t:"tool", server:"reservations", act:"write_query — insert booking BKG-6002", res:"confirmed  ✓"},
         {t:"answer", cls:"bad", text:"Booked DL455 to Phoenix — sunny, $129 — 12,000 miles applied."},
-        {t:"reality", text:"Reality: Phoenix is under a storm right now. The weather field was 5 days stale (weather_as_of = 2026-08-17). Right reasoning, dead source."}
+        {t:"reality", text:"Reality: Phoenix is under a storm. The weather field was 5 days stale (weather_as_of 2026-08-17) — and the confirmation didn't save you, because you approved the same stale “Sunny.” Right reasoning, dead source."}
       ]
     },
     C: {
@@ -314,8 +324,11 @@ cheat-sheet are in
          res:"SAN $149 Sunny (as_of today)  ✓"},
         {t:"think", text:"cheapest sunny → San Diego."},
         {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", err:true, res:"✕ ERROR: file is not a database"},
-        {t:"answer", cls:"bad", text:"Booked AA88 to San Diego, $149 — 12,000 miles applied. (Couldn't reach loyalty; proceeding.)"},
-        {t:"reality", text:"It treated “couldn't check the miles” as “nothing blocking” and booked anyway — fail OPEN."}
+        {t:"answer", cls:"", text:"Here's what I found: AA88 to San Diego — sunny, $149. Heads up — I couldn't reach the loyalty system to confirm your miles, but I can still book. Shall I book it?"},
+        {t:"choice"},
+        {t:"tool", server:"reservations", act:"write_query — insert booking BKG-6003", res:"confirmed  ✓"},
+        {t:"answer", cls:"bad", text:"Booked AA88 to San Diego, $149 — applied 12,000 miles (unverified)."},
+        {t:"reality", text:"It offered to book and went ahead despite never confirming your miles — fail OPEN."}
       ]
     },
     D: {
@@ -401,6 +414,17 @@ cheat-sheet are in
       runBtn.textContent = "↻ Replay";
     }
 
+    // user chose "Search something else": assistant offers to keep looking, then stop
+    function abortToAlt(){
+      playStep({t:"answer", cls:"", text:"No problem — want something cheaper, a different city, or a nonstop? Tell me and I'll search again."}, function(){
+        pointEl.innerHTML = "";
+        pointEl.appendChild(el("b", "", "Tip: "));
+        pointEl.appendChild(document.createTextNode("A real assistant confirms before it books. Click “Book it” to see how this beat plays out."));
+        runBtn.disabled = false;
+        runBtn.textContent = "↻ Replay";
+      });
+    }
+
     function playStep(step, done){
       // tool call: show the header + a spinner, then reveal the result after "latency"
       if(step.t==="tool"){
@@ -435,6 +459,28 @@ cheat-sheet are in
           b.appendChild(document.createTextNode(step.text));
           scrollDown(); done();
         }, 950);
+        return;
+      }
+      // confirmation gate: buttons, wait for the user to choose (no auto-advance)
+      if(step.t==="choice"){
+        var crow=el("div","row choice-row");
+        var bBook=el("button","choice-btn book","✓ Book it");
+        var bAlt=el("button","choice-btn alt","↺ Search something else");
+        crow.appendChild(bBook); crow.appendChild(bAlt);
+        screen.appendChild(crow); scrollDown();
+        var picked=false;
+        bBook.addEventListener("click", function(){
+          if(picked||token!==runToken) return; picked=true;
+          if(crow.parentNode) crow.parentNode.removeChild(crow);
+          var ur=el("div","row"); ur.appendChild(el("div","bubble user","Yes, book it.")); screen.appendChild(ur); scrollDown();
+          setTimeout(done, reduced?30:420);
+        });
+        bAlt.addEventListener("click", function(){
+          if(picked||token!==runToken) return; picked=true;
+          if(crow.parentNode) crow.parentNode.removeChild(crow);
+          var ur=el("div","row"); ur.appendChild(el("div","bubble user","Actually, show me other options.")); screen.appendChild(ur); scrollDown();
+          setTimeout(abortToAlt, reduced?30:420);
+        });
         return;
       }
       // everything else appears immediately
