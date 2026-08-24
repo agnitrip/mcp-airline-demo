@@ -287,9 +287,9 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
 <div class="note">
   <strong>This is a simulation.</strong> It plays scripted, canned data <em>in your browser</em> — no real
   MCP servers or model calls run here. Watch the architecture on the left light up as each
-  <span class="mcp-tag">MCP tool call</span> fires — or untick <em>Animate architecture</em> for a plain
-  transcript. You send the first message and choose whether to book. To run it for real, open the
-  <strong>Run it yourself</strong> tab.
+  <span class="mcp-tag">MCP tool call</span> fires, and step through with <em>Proceed →</em> so you can follow
+  each call. Untick <em>Animate architecture</em> to auto-play instead. You send the first message and choose
+  whether to book. To run it for real, open the <strong>Run it yourself</strong> tab.
 </div>
 <div class="showcase">
   <div class="showcase-arch">
@@ -326,6 +326,7 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
       </div>
       <div class="sim-controls">
         <button class="sim-run" id="simRun">▶ Run this beat</button>
+        <button class="sim-run proceed" id="simProceed" hidden>Proceed →</button>
         <label class="arch-toggle"><input type="checkbox" id="animArch" checked> Animate architecture</label>
         <span class="sim-point" id="simPoint"></span>
       </div>
@@ -541,6 +542,7 @@ cheat-sheet are in
   var screen = document.getElementById("simScreen");
   var stateBar = document.getElementById("simState");
   var runBtn = document.getElementById("simRun");
+  var proceedBtn = document.getElementById("simProceed");
   var pointEl = document.getElementById("simPoint");
   var tabs = document.getElementById("simTabs");
   var current = "A";
@@ -605,6 +607,7 @@ cheat-sheet are in
     screen.innerHTML = "";
     pointEl.innerHTML = "";
     archClearAll();
+    proceedBtn.hidden = true; proceedBtn.onclick = null; runBtn.style.display = "";
     runBtn.disabled = true;
     runBtn.textContent = "Running…";
     var i = 0;
@@ -614,6 +617,8 @@ cheat-sheet are in
       pointEl.innerHTML = "";
       pointEl.appendChild(el("b", p.cls, "Point: "));
       pointEl.appendChild(document.createTextNode(p.text));
+      proceedBtn.hidden = true; proceedBtn.onclick = null;
+      runBtn.style.display = "";
       runBtn.disabled = false;
       runBtn.textContent = "↻ Replay";
     }
@@ -723,13 +728,27 @@ cheat-sheet are in
       setTimeout(done, reduced?20:130);
     }
 
+    // in animate mode, pause after each step and wait for the user to click Proceed
+    function showProceed(){
+      proceedBtn.hidden = false;
+      runBtn.style.display = "none";
+      proceedBtn.onclick = function(){
+        if(token!==runToken) return;
+        proceedBtn.hidden = true; proceedBtn.onclick = null;
+        runBtn.style.display = "";
+        nextStep();
+      };
+    }
     function nextStep(){
       if(token!==runToken) return;                    // a newer run/tab took over
       if(i>=steps.length){ finish(); return; }
       var step=steps[i++];
       playStep(step, function(){
         if(token!==runToken) return;
-        setTimeout(nextStep, reduced?30:280);
+        var manual = animArchEl && animArchEl.checked;
+        var selfGated = (step.t==="user" && step.send) || step.t==="choice";
+        if(manual && !selfGated && i<steps.length){ showProceed(); }
+        else { setTimeout(nextStep, reduced?30:(selfGated?200:280)); }
       });
     }
     nextStep();
@@ -746,6 +765,8 @@ cheat-sheet are in
     empty.innerHTML = "Press <strong>▶ Run this beat</strong> to watch the assistant compose the MCP tools.";
     screen.appendChild(empty);
     pointEl.innerHTML = "";
+    proceedBtn.hidden = true; proceedBtn.onclick = null;
+    runBtn.style.display = "";
     runBtn.disabled = false;
     runBtn.textContent = "▶ Run this beat";
   }
