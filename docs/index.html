@@ -147,6 +147,25 @@
   .arch-legend b{color:var(--warn);font-weight:600}
   .cap{color:var(--muted);font-size:13px;margin:8px 0 2px}
   td .ok,td .bad,td .warn{font-weight:600}
+  /* ---- side-by-side architecture + simulator ---- */
+  .showcase{display:grid;grid-template-columns:minmax(0,290px) minmax(0,1fr);gap:16px;align-items:start;margin:12px 0 6px}
+  .showcase-arch{position:sticky;top:12px}
+  .arch-cap{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 7px 2px}
+  .arch-live{display:flex;flex-direction:column}
+  .lnode{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:9px 11px;
+    transition:border-color .25s,box-shadow .25s,background .25s}
+  .lnode.host{border-color:rgba(110,168,254,.4)}
+  .lnode.server{background:var(--code)}
+  .lnode .ntype{color:var(--muted)}
+  .lname{font-weight:700;font-size:14px}
+  .lsub{color:var(--muted);font-size:11.5px;margin-top:2px;word-break:break-word}
+  .lsub.tools{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);opacity:.9;margin-top:3px}
+  .lwire{text-align:center;color:var(--muted);font-size:10.5px;padding:5px 0}
+  .lnode.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(110,168,254,.35);background:rgba(110,168,254,.12)}
+  .lnode.err{border-color:var(--bad);box-shadow:0 0 0 2px rgba(255,128,149,.35);background:rgba(255,128,149,.12)}
+  .arch-toggle{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;cursor:pointer}
+  .arch-toggle input{accent-color:var(--accent);margin:0}
+  @media (max-width:760px){ .showcase{grid-template-columns:1fr} .showcase-arch{position:static} }
   @media (max-width:640px){
     .wrap{padding:26px 15px 60px}
     h1{font-size:25px} h2{font-size:18px}
@@ -264,99 +283,58 @@ is unreachable (the DB file is swapped for junk), and the query errors.</p>
 <p class="cap">The filesystem server serves whatever is in <code>policy/active/</code>. A toggle swaps
 current ↔ stale — the RAG version of the stale-source failure.</p>
 
-<h2>How it's wired</h2>
-<p>One host, three servers, three backends. The host is any MCP client; the model decides which tools to call.</p>
-<div class="arch">
-  <div class="tier">
-    <div class="node">
-      <span class="ntype">User</span>
-      <div class="nname">Traveler — Jordan Rivera</div>
-      <div class="ndesc">“Book me a cheap flight somewhere sunny this weekend and use my miles.”</div>
-    </div>
-  </div>
-  <div class="flow">↓&nbsp;&nbsp;natural language</div>
-  <div class="tier">
-    <div class="node host">
-      <span class="ntype">MCP Host / Client</span>
-      <div class="nname">Desktop app + model</div>
-      <div class="ndesc">Claude Desktop, Claude Code, or any MCP-capable client. The model decides which tools to call.</div>
-    </div>
-  </div>
-  <div class="flow">↓&nbsp;&nbsp;<b>MCP protocol</b> · JSON-RPC over stdio</div>
-  <div class="cols">
-    <div class="col">
-      <div class="node server">
-        <span class="ntype">MCP Server</span>
-        <div class="nname">reservations</div>
-        <div class="ndesc">mcp-server-sqlite</div>
-        <div class="tools"><span class="tlabel">Tools</span><div class="tlist">read_query · write_query</div></div>
-      </div>
-      <div class="conn">↓ reads / writes</div>
-      <div class="node db">
-        <span class="ntype">Database · SQLite</span>
-        <div class="nname">reservations.db</div>
-        <div class="ndesc">flights · airports · bookings</div>
-      </div>
-    </div>
-    <div class="col">
-      <div class="node server">
-        <span class="ntype">MCP Server</span>
-        <div class="nname">loyalty</div>
-        <div class="ndesc">mcp-server-sqlite</div>
-        <div class="tools"><span class="tlabel">Tools</span><div class="tlist">read_query</div></div>
-      </div>
-      <div class="conn">↓ reads</div>
-      <div class="node db">
-        <span class="ntype">Database · SQLite</span>
-        <div class="nname">loyalty.db</div>
-        <div class="ndesc">members · miles · tier</div>
-      </div>
-    </div>
-    <div class="col">
-      <div class="node server">
-        <span class="ntype">MCP Server</span>
-        <div class="nname">policies</div>
-        <div class="ndesc">server-filesystem</div>
-        <div class="tools"><span class="tlabel">Tools</span><div class="tlist">read_file · list_directory</div></div>
-      </div>
-      <div class="conn">↓ reads</div>
-      <div class="node fs">
-        <span class="ntype">File store</span>
-        <div class="nname">policy/active/</div>
-        <div class="ndesc">refund · baggage (.md)</div>
-      </div>
-    </div>
-  </div>
-  <div class="arch-legend">Each server re-reads its backend on <strong>every call</strong>, so the toggle scripts change
-  behavior with <strong>no restart</strong> — <b>use-stale.sh</b> → reservations, <b>break-miles.sh</b> → loyalty,
-  <b>use-stale-policy.sh</b> → policies.</div>
-</div>
-
-<h2 id="try">See it happen — simulator</h2>
+<h2 id="try">See it happen</h2>
 <div class="note">
   <strong>This is a simulation.</strong> It plays scripted, canned data <em>in your browser</em> — no real
-  MCP servers and no model calls run here. It mirrors what the live demo produces so you can watch all four
-  beats on any device, including your phone. <strong>You</strong> send the first message, and each
-  <span class="mcp-tag">MCP tool call</span> line is a call to a separate backend system (SQLite / filesystem).
-  The assistant also asks before it books — you click <em>Book it</em> or <em>Search something else</em>.
-  To run it for real, follow the steps below.
+  MCP servers or model calls run here. Watch the architecture on the left light up as each
+  <span class="mcp-tag">MCP tool call</span> fires — or untick <em>Animate architecture</em> for a plain
+  transcript. You send the first message and choose whether to book. To run it for real, open the
+  <strong>Run it yourself</strong> tab.
 </div>
-<div class="sim">
-  <div class="sim-tabs" id="simTabs">
-    <button class="sim-tab active" data-beat="A">A · happy path</button>
-    <button class="sim-tab" data-beat="B">B · stale source</button>
-    <button class="sim-tab" data-beat="C">C · tool error</button>
-    <button class="sim-tab" data-beat="D">D · guardrail</button>
+<div class="showcase">
+  <div class="showcase-arch">
+    <div class="arch-cap">Architecture</div>
+    <div class="arch-live" id="archLive">
+      <div class="lnode" id="arch-user"><span class="ntype">User</span>
+        <div class="lname">Traveler — Jordan Rivera</div></div>
+      <div class="lwire">↓ natural language</div>
+      <div class="lnode host" id="arch-host"><span class="ntype">MCP Host + model</span>
+        <div class="lname">any MCP client</div><div class="lsub">chooses which tools to call</div></div>
+      <div class="lwire">↓ MCP · JSON-RPC / stdio</div>
+      <div class="lnode server" id="arch-reservations"><span class="ntype">MCP Server → SQLite</span>
+        <div class="lname">reservations</div><div class="lsub">reservations.db · flights · airports · bookings</div>
+        <div class="lsub tools">read_query · write_query</div></div>
+      <div class="lnode server" id="arch-loyalty"><span class="ntype">MCP Server → SQLite</span>
+        <div class="lname">loyalty</div><div class="lsub">loyalty.db · members · miles</div>
+        <div class="lsub tools">read_query</div></div>
+      <div class="lnode server" id="arch-policies"><span class="ntype">MCP Server → filesystem</span>
+        <div class="lname">policies</div><div class="lsub">policy/active · refund · baggage (.md)</div>
+        <div class="lsub tools">read_file · list_directory</div></div>
+    </div>
   </div>
-  <div class="sim-state" id="simState"></div>
-  <div class="sim-screen" id="simScreen">
-    <div class="sim-empty">Press <strong>▶ Run this beat</strong> to watch the assistant compose the MCP tools.</div>
-  </div>
-  <div class="sim-controls">
-    <button class="sim-run" id="simRun">▶ Run this beat</button>
-    <span class="sim-point" id="simPoint"></span>
+  <div class="showcase-sim">
+    <div class="sim">
+      <div class="sim-tabs" id="simTabs">
+        <button class="sim-tab active" data-beat="A">A · happy path</button>
+        <button class="sim-tab" data-beat="B">B · stale source</button>
+        <button class="sim-tab" data-beat="C">C · tool error</button>
+        <button class="sim-tab" data-beat="D">D · guardrail</button>
+      </div>
+      <div class="sim-state" id="simState"></div>
+      <div class="sim-screen" id="simScreen">
+        <div class="sim-empty">Press <strong>▶ Run this beat</strong> to watch the assistant compose the MCP tools.</div>
+      </div>
+      <div class="sim-controls">
+        <button class="sim-run" id="simRun">▶ Run this beat</button>
+        <label class="arch-toggle"><input type="checkbox" id="animArch" checked> Animate architecture</label>
+        <span class="sim-point" id="simPoint"></span>
+      </div>
+    </div>
   </div>
 </div>
+<p class="cap">Each server re-reads its backend on <strong>every call</strong>, so the toggle scripts
+(<b>use-stale.sh</b>, <b>break-miles.sh</b>) change behavior with <strong>no restart</strong> — the point of
+the demo, and the source of both failures.</p>
 
 <div class="card">
   <strong>The takeaway.</strong> MCP makes it easy to compose real systems (Beat A). The same
@@ -569,6 +547,21 @@ cheat-sheet are in
   var runToken = 0;
   var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // live architecture highlighting (optional, toggled by #animArch)
+  var animArchEl = document.getElementById("animArch");
+  var ARCH_IDS = { reservations:"arch-reservations", loyalty:"arch-loyalty", policies:"arch-policies" };
+  function archClearAll(){
+    var live = document.getElementById("archLive"); if(!live) return;
+    var ns = live.querySelectorAll(".lnode");
+    for(var j=0;j<ns.length;j++){ ns[j].classList.remove("active","err"); }
+  }
+  function archHit(id, isErr){
+    if(!animArchEl || !animArchEl.checked || !id) return;
+    archClearAll();
+    var n = document.getElementById(id); if(n) n.classList.add(isErr?"err":"active");
+  }
+  if(animArchEl){ animArchEl.addEventListener("change", function(){ if(!animArchEl.checked) archClearAll(); }); }
+
   function el(tag, cls, text){ var e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e; }
 
   function renderState(beat){
@@ -611,6 +604,7 @@ cheat-sheet are in
     var steps = withSteps(beat);
     screen.innerHTML = "";
     pointEl.innerHTML = "";
+    archClearAll();
     runBtn.disabled = true;
     runBtn.textContent = "Running…";
     var i = 0;
@@ -655,7 +649,7 @@ cheat-sheet are in
           if(crow.parentNode) crow.parentNode.removeChild(crow);
           if(hint.parentNode) hint.parentNode.removeChild(hint);
           var ur=el("div","row"); ur.appendChild(el("div","bubble user",txt));
-          screen.appendChild(ur); scrollDown();
+          screen.appendChild(ur); scrollDown(); archHit("arch-user");
           setTimeout(done, reduced?30:340);
         }
         snd.addEventListener("click", doSend);
@@ -672,7 +666,7 @@ cheat-sheet are in
         top.appendChild(sys); box.appendChild(top);
         var hd=el("div","hd","→ "+step.act);
         var res=el("span","res"); box.appendChild(hd); box.appendChild(res);
-        row.appendChild(box); screen.appendChild(row); scrollDown();
+        row.appendChild(box); screen.appendChild(row); scrollDown(); archHit(ARCH_IDS[step.server], step.err);
         if(reduced){ res.textContent=step.res; if(step.err){box.classList.add("err");hd.textContent="✕ "+step.act;} return done(); }
         res.appendChild(el("span","spin"));
         setTimeout(function(){
@@ -689,7 +683,7 @@ cheat-sheet are in
         var cls="bubble asst"+(step.t==="greet"?" greet":(" "+step.cls));
         var b=el("div",cls);
         b.appendChild(el("span","who","Ava · airline assistant"));
-        row2.appendChild(b); screen.appendChild(row2); scrollDown();
+        row2.appendChild(b); screen.appendChild(row2); scrollDown(); archHit("arch-host");
         if(reduced){ b.appendChild(document.createTextNode(step.text)); return done(); }
         var typing=el("span","typing");
         typing.appendChild(el("i")); typing.appendChild(el("i")); typing.appendChild(el("i"));
@@ -744,6 +738,7 @@ cheat-sheet are in
   function selectBeat(beat){
     current = beat;
     runToken++;                                       // cancel any in-flight run
+    archClearAll();
     [].forEach.call(tabs.children, function(b){ b.classList.toggle("active", b.getAttribute("data-beat")===beat); });
     renderState(beat);
     screen.innerHTML = "";
