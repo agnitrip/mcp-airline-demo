@@ -85,6 +85,16 @@
   .sim-run:disabled{opacity:.5;cursor:default}
   .sim-point{color:var(--muted);font-size:13.5px}
   .sim-point b.good{color:var(--good)} .sim-point b.bad{color:var(--bad)}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);
+    border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .typing{display:inline-flex;gap:4px;align-items:center;padding:2px 0}
+  .typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);
+    display:inline-block;animation:blink 1s infinite}
+  .typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s}
+  @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+  .bubble.asst.greet{color:var(--ink)}
+  .bubble.asst .who{display:block;color:var(--muted);font-size:11.5px;margin-bottom:2px;font-weight:600}
   @media (max-width:640px){
     .wrap{padding:26px 15px 60px}
     h1{font-size:25px} h2{font-size:18px}
@@ -351,50 +361,97 @@ cheat-sheet are in
     });
   }
 
-  function stepNode(step){
+  function simpleNode(step){
     if(step.t==="user"){ var r=el("div","row"); r.appendChild(el("div","bubble user", step.text)); return r; }
-    if(step.t==="answer"){ var r=el("div","row"); r.appendChild(el("div","bubble asst "+step.cls, step.text)); return r; }
     if(step.t==="note"){ var r=el("div","row"); r.appendChild(el("div","think", "$ " + step.text)); return r; }
     if(step.t==="think"){ var r=el("div","row"); r.appendChild(el("div","think", "↳ " + step.text)); return r; }
     if(step.t==="divider"){ var r=el("div","row"); r.appendChild(el("div","divider", step.text)); return r; }
     if(step.t==="guard"){ var r=el("div","row"); r.appendChild(el("div","guard", "🛡 " + step.text)); return r; }
     if(step.t==="reality"){ var r=el("div","row"); r.appendChild(el("div","reality", step.text)); return r; }
-    if(step.t==="tool"){
-      var r=el("div","row");
-      var box=el("div","tool"+(step.err?" err":""));
-      box.appendChild(el("div","hd", (step.err?"✕":"→")+" "+step.server+" · "+step.act));
-      box.appendChild(el("span","res", step.res));
-      r.appendChild(box); return r;
-    }
     var r=el("div","row"); r.appendChild(el("div",null,step.text||"")); return r;
   }
 
+  // insert Ava's greeting just before the first user message
+  function withSteps(beat){
+    var base = BEATS[beat].steps.slice();
+    var greet = {t:"greet", text:"Hi! I'm Ava, your airline booking assistant. Where are we headed today — how can I help?"};
+    var gi = -1;
+    for(var k=0;k<base.length;k++){ if(base[k].t==="user"){ gi=k; break; } }
+    if(gi<0){ base.unshift(greet); } else { base.splice(gi,0,greet); }
+    return base;
+  }
+
+  function scrollDown(){ screen.scrollTop = screen.scrollHeight; }
+
   function run(beat){
     var token = ++runToken;
-    var steps = BEATS[beat].steps;
+    var steps = withSteps(beat);
     screen.innerHTML = "";
     pointEl.innerHTML = "";
     runBtn.disabled = true;
     runBtn.textContent = "Running…";
     var i = 0;
-    function next(){
-      if(token !== runToken) return;                 // a newer run/tab took over
-      if(i >= steps.length){
-        var p = BEATS[beat].point;
-        pointEl.innerHTML = "";
-        pointEl.appendChild(el("b", p.cls, "Point: "));
-        pointEl.appendChild(document.createTextNode(p.text));
-        runBtn.disabled = false;
-        runBtn.textContent = "↻ Replay";
+
+    function finish(){
+      var p = BEATS[beat].point;
+      pointEl.innerHTML = "";
+      pointEl.appendChild(el("b", p.cls, "Point: "));
+      pointEl.appendChild(document.createTextNode(p.text));
+      runBtn.disabled = false;
+      runBtn.textContent = "↻ Replay";
+    }
+
+    function playStep(step, done){
+      // tool call: show the header + a spinner, then reveal the result after "latency"
+      if(step.t==="tool"){
+        var row=el("div","row"), box=el("div","tool");
+        var hd=el("div","hd","→ "+step.server+" · "+step.act);
+        var res=el("span","res"); box.appendChild(hd); box.appendChild(res);
+        row.appendChild(box); screen.appendChild(row); scrollDown();
+        if(reduced){ res.textContent=step.res; if(step.err){box.classList.add("err");hd.textContent="✕ "+step.server+" · "+step.act;} return done(); }
+        res.appendChild(el("span","spin"));
+        setTimeout(function(){
+          if(token!==runToken) return;
+          res.textContent=step.res;
+          if(step.err){ box.classList.add("err"); hd.textContent="✕ "+step.server+" · "+step.act; }
+          scrollDown(); done();
+        }, 820);
         return;
       }
-      screen.appendChild(stepNode(steps[i]));
-      screen.scrollTop = screen.scrollHeight;
-      i++;
-      var delay = reduced ? 60 : (steps[i-1] && steps[i-1].t==="user" ? 360 : 720);
-      setTimeout(next, delay);
+      // assistant answer or greeting: typing dots, then the text
+      if(step.t==="answer" || step.t==="greet"){
+        var row2=el("div","row");
+        var cls="bubble asst"+(step.t==="greet"?" greet":(" "+step.cls));
+        var b=el("div",cls);
+        b.appendChild(el("span","who","Ava · airline assistant"));
+        row2.appendChild(b); screen.appendChild(row2); scrollDown();
+        if(reduced){ b.appendChild(document.createTextNode(step.text)); return done(); }
+        var typing=el("span","typing");
+        typing.appendChild(el("i")); typing.appendChild(el("i")); typing.appendChild(el("i"));
+        b.appendChild(typing);
+        setTimeout(function(){
+          if(token!==runToken) return;
+          b.removeChild(typing);
+          b.appendChild(document.createTextNode(step.text));
+          scrollDown(); done();
+        }, 950);
+        return;
+      }
+      // everything else appears immediately
+      screen.appendChild(simpleNode(step)); scrollDown();
+      setTimeout(done, reduced?20:130);
     }
-    next();
+
+    function nextStep(){
+      if(token!==runToken) return;                    // a newer run/tab took over
+      if(i>=steps.length){ finish(); return; }
+      var step=steps[i++];
+      playStep(step, function(){
+        if(token!==runToken) return;
+        setTimeout(nextStep, reduced?30:280);
+      });
+    }
+    nextStep();
   }
 
   function selectBeat(beat){
