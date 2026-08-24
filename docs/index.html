@@ -176,6 +176,9 @@
     .wrap{padding:26px 15px 60px}
     h1{font-size:25px} h2{font-size:18px}
     table{min-width:520px}          /* keep columns legible; wrapper scrolls */
+    .tablewrap{position:relative}
+    .tablewrap::after{content:"";position:absolute;top:0;right:0;bottom:0;width:22px;
+      background:linear-gradient(to right, transparent, var(--bg));pointer-events:none}
     pre{font-size:12px}
     .sim-tab{flex-basis:50%;min-width:0} .bubble{max-width:95%}
     .cols{grid-template-columns:1fr}
