@@ -1,0 +1,2 @@
+# This folder is populated by scripts/setup.sh (copies from policy/current).
+# The filesystem MCP server serves this directory; it must exist on clone.

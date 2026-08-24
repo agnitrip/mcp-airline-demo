@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP Airline Demo — run it in 5 minutes</title>
+<meta name="description" content="Reproduce the airline MCP demo from the IEEE talk 'Connecting Enterprise AI Using MCP' in about five minutes. Synthetic, open-source, tool-neutral.">
+<style>
+  :root{
+    --bg:#0f1220; --panel:#171a2b; --ink:#e8eaf3; --muted:#9aa3bd;
+    --line:#2a2f47; --accent:#6ea8fe; --good:#57d9a3; --warn:#f2b872; --bad:#ff8095;
+    --code:#0b0e1a;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:860px;margin:0 auto;padding:40px 22px 80px}
+  header{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:26px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.02em}
+  h2{font-size:20px;margin:38px 0 12px;letter-spacing:-.01em}
+  h3{font-size:16px;margin:22px 0 6px}
+  p{color:var(--ink)}
+  .sub{color:var(--muted);font-size:16px;margin:0}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .lede{color:var(--muted);margin:14px 0 0}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  code{background:var(--code);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:13.5px}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;overflow:auto;font-size:13px;line-height:1.55}
+  pre code{background:none;border:none;padding:0}
+  .pill{display:inline-block;background:var(--panel);border:1px solid var(--line);
+    color:var(--muted);border-radius:999px;padding:3px 11px;font-size:12.5px;margin:0 6px 6px 0}
+  ul{padding-left:20px}
+  li{margin:5px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  th{background:var(--panel);color:var(--muted);font-weight:600}
+  .beat{font-weight:700}
+  .ok{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+  .note{border-left:3px solid var(--warn);background:rgba(242,184,114,.08);
+    padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;color:var(--ink);font-size:14.5px}
+  .cta{display:inline-block;background:var(--accent);color:#0b0e1a;font-weight:700;
+    padding:10px 18px;border-radius:10px;margin-top:6px}
+  .cta:hover{text-decoration:none;filter:brightness(1.05)}
+  footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px}
+  .kbd{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>MCP Airline Demo</h1>
+  <p class="sub">Run the demo from the IEEE talk <em>“Connecting Enterprise AI Using MCP”</em> in about five minutes.</p>
+  <p class="lede">One request — <strong>“Book me a cheap flight somewhere sunny this weekend and use my miles”</strong> —
+  run four ways: the happy path, two ways it silently goes wrong, and the fix. Everything is
+  <strong>synthetic and open-source</strong>. Tool-neutral: any MCP-capable client works.</p>
+  <p style="margin-top:16px">
+    <span class="pill">3 off-the-shelf MCP servers</span>
+    <span class="pill">no restarts between beats</span>
+    <span class="pill">synthetic data</span>
+    <span class="pill">MIT</span>
+  </p>
+  <a class="cta" href="https://github.com/agnitrip/mcp-airline-demo">View the repo on GitHub →</a>
+</header>
+
+<h2>What it is</h2>
+<p>An assistant composes three separate back-end systems over MCP to book a trip:</p>
+<table>
+  <tr><th>Server</th><th>Off-the-shelf package</th><th>Serves</th></tr>
+  <tr><td><code>reservations</code></td><td><code>mcp-server-sqlite</code> (via <code>uvx</code>)</td><td>flights, per-airport weather, bookings</td></tr>
+  <tr><td><code>loyalty</code></td><td><code>mcp-server-sqlite</code> (via <code>uvx</code>)</td><td>frequent-flyer members</td></tr>
+  <tr><td><code>policies</code></td><td><code>@modelcontextprotocol/server-filesystem</code> (via <code>npx</code>)</td><td>refund + baggage rules (markdown)</td></tr>
+</table>
+<p>Each server reads its data <strong>fresh on every call</strong>. That is the whole trick: change a file
+between two questions and the next answer changes — no restart, no redeploy.</p>
+
+<h2>Prerequisites</h2>
+<ul>
+  <li><a href="https://docs.astral.sh/uv/">uv</a> — runs the SQLite server:
+      <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></li>
+  <li><a href="https://nodejs.org/">Node.js</a> — runs the filesystem server via <code>npx</code></li>
+  <li>An MCP client — e.g. <a href="https://claude.ai/download">Claude Desktop</a> or
+      <a href="https://docs.claude.com/en/docs/claude-code">Claude Code</a>. Any MCP host works.</li>
+  <li>Python 3 (stdlib only) — seeds the synthetic databases</li>
+</ul>
+
+<h2>1 · Clone &amp; seed</h2>
+<pre><code>git clone https://github.com/agnitrip/mcp-airline-demo.git
+cd mcp-airline-demo
+./scripts/setup.sh        # seed synthetic DBs + clean baseline
+./scripts/status.sh       # -> reservations CURRENT, loyalty healthy, policies CURRENT</code></pre>
+
+<h2>2 · Wire the MCP host</h2>
+<p>Add the three servers to your client's config. Replace
+<code>/ABSOLUTE/PATH/TO/mcp-airline-demo</code> with the real path — SQLite needs absolute paths.</p>
+<pre><code>{
+  "mcpServers": {
+    "reservations": {
+      "command": "uvx",
+      "args": ["--with", "mcp[cli]&lt;2", "mcp-server-sqlite",
+               "--db-path", "/ABSOLUTE/PATH/TO/mcp-airline-demo/data/reservations.db"]
+    },
+    "loyalty": {
+      "command": "uvx",
+      "args": ["--with", "mcp[cli]&lt;2", "mcp-server-sqlite",
+               "--db-path", "/ABSOLUTE/PATH/TO/mcp-airline-demo/data/loyalty.db"]
+    },
+    "policies": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem",
+               "/ABSOLUTE/PATH/TO/mcp-airline-demo/policy/active"]
+    }
+  }
+}</code></pre>
+<div class="note">
+  <strong>The <code>--with "mcp[cli]&lt;2"</code> pin is required.</strong> Plain
+  <code>uvx mcp-server-sqlite</code> pulls the <code>mcp</code> SDK 2.x, and the archived reference
+  server crashes on it (<code>'Server' object has no attribute 'list_resources'</code>). The pin holds it
+  at 1.x. See <a href="https://github.com/agnitrip/mcp-airline-demo/blob/main/FIX-sqlite-server-pin.md">FIX-sqlite-server-pin.md</a>.
+</div>
+<p><strong>Claude Desktop</strong> (macOS): put this in
+<code>~/Library/Application Support/Claude/claude_desktop_config.json</code>.
+<strong>Claude Code</strong>: save as <code>.mcp.json</code> in the project root.
+Then <strong>fully quit and reopen</strong> the host and confirm all three servers connect.
+If the host can't find <code>uvx</code>, use its absolute path (<code>which uvx</code>).</p>
+
+<h2>3 · The two prompts</h2>
+<p>Set the assistant's instructions to one of these (paste as Project instructions in Claude Desktop,
+or as the first message in Claude Code):</p>
+<ul>
+  <li><a href="https://github.com/agnitrip/mcp-airline-demo/blob/main/prompts/assistant-base.md"><code>assistant-base.md</code></a>
+      — naive build (Beats A, B, C). No guardrail, so a stale source or a broken tool fools it.</li>
+  <li><a href="https://github.com/agnitrip/mcp-airline-demo/blob/main/prompts/assistant-guardrailed.md"><code>assistant-guardrailed.md</code></a>
+      — same assistant + a guardrail: <em>quote your source</em> and <em>fail closed</em> on missing,
+      errored, or stale data (Beat D).</li>
+</ul>
+
+<h2>4 · Run the four beats</h2>
+<p>Start a <strong>new chat</strong> for each beat and type the same request every time:</p>
+<pre><code>Book me a cheap flight somewhere sunny this weekend and use my miles. I'm Jordan Rivera.</code></pre>
+<table>
+  <tr><th>Beat</th><th>Toggle (terminal)</th><th>Prompt</th><th>Outcome</th></tr>
+  <tr>
+    <td class="beat">A · happy path</td>
+    <td><code>./scripts/setup.sh</code></td>
+    <td>base</td>
+    <td class="ok">Books San Diego $149, sunny, 12k miles — correct</td>
+  </tr>
+  <tr>
+    <td class="beat">B · stale source</td>
+    <td><code>./scripts/use-stale.sh</code></td>
+    <td>base</td>
+    <td class="bad">Books Phoenix $129 on 5-day-old weather — it's really a storm</td>
+  </tr>
+  <tr>
+    <td class="beat">C · tool error</td>
+    <td><code>./scripts/use-current.sh</code><br><code>./scripts/break-miles.sh</code></td>
+    <td>base</td>
+    <td class="bad">Loyalty server errors → books anyway (fail open)</td>
+  </tr>
+  <tr>
+    <td class="beat">D · guardrail</td>
+    <td><span class="warn">swap to the guardrailed prompt</span></td>
+    <td>guardrailed</td>
+    <td class="ok">Catches both: refuses on the error, flags the stale weather</td>
+  </tr>
+</table>
+<p>Reset any time with <code>./scripts/setup.sh</code>. Full narration, timing, and a monitor
+cheat-sheet are in
+<a href="https://github.com/agnitrip/mcp-airline-demo/blob/main/demo/demo-script.md">demo/demo-script.md</a>.</p>
+
+<div class="card">
+  <strong>The takeaway.</strong> MCP makes it easy to compose real systems (Beat A). The same
+  flexibility means a stale source (B) or a silent tool error (C) produces a confident wrong answer.
+  The fix is not more servers — it's a rule: <em>quote your source, fail closed</em> (D). A system
+  prompt here; code in production.
+</div>
+
+<footer>
+  Synthetic data only — “Jordan Rivera” and all airline data are fake. MIT-licensed.
+  &nbsp;·&nbsp; <a href="https://github.com/agnitrip/mcp-airline-demo">github.com/agnitrip/mcp-airline-demo</a>
+</footer>
+
+</div>
+</body>
+</html>

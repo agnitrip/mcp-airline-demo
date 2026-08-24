@@ -1,0 +1,20 @@
+# generated data (reseed with scripts/setup.sh)
+data/reservations-current.db
+data/reservations-stale.db
+data/reservations.db
+data/loyalty.db
+data/loyalty.db.real
+
+# Beat C flag for the optional fallback server
+scripts/loyalty_fallback/OUTAGE
+
+# active policy folder is populated by the scripts
+policy/active/*.md
+
+# recorded backup video
+demo/backup-run.mov
+demo/*.mov
+
+# OS junk
+.DS_Store
+**/.DS_Store
