@@ -208,10 +208,10 @@
 <p>An assistant composes three separate back-end systems over MCP to book a trip:</p>
 <div class="tablewrap">
 <table>
-  <tr><th>Server</th><th>Off-the-shelf package</th><th>Serves</th></tr>
-  <tr><td><code>reservations</code></td><td><code>mcp-server-sqlite</code> (via <code>uvx</code>)</td><td>flights, per-airport weather, bookings</td></tr>
-  <tr><td><code>loyalty</code></td><td><code>mcp-server-sqlite</code> (via <code>uvx</code>)</td><td>frequent-flyer members</td></tr>
-  <tr><td><code>policies</code></td><td><code>@modelcontextprotocol/server-filesystem</code> (via <code>npx</code>)</td><td>refund + baggage rules (markdown)</td></tr>
+  <tr><th>Server</th><th>What it is</th><th>What it contains</th></tr>
+  <tr><td><code>reservations</code></td><td>A SQLite database</td><td>3 tables — <code>flights</code>, <code>airports</code> (weather), <code>bookings</code></td></tr>
+  <tr><td><code>loyalty</code></td><td>A SQLite database</td><td>1 table — <code>members</code> (miles balance, tier)</td></tr>
+  <tr><td><code>policies</code></td><td>A folder of markdown files</td><td>2 docs — <code>refund-policy.md</code>, <code>baggage-policy.md</code></td></tr>
 </table>
 </div>
 <p>Each server reads its data <strong>fresh on every call</strong>. That is the whole trick: change a file
