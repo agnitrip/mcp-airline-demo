@@ -114,12 +114,29 @@
   .composer-send{background:var(--accent);color:#0b0e1a;border:0;border-radius:9px;
     padding:9px 14px;font:700 13px/1 inherit;cursor:pointer;white-space:nowrap}
   .composer-hint{font-size:11.5px;color:var(--muted);margin:2px 2px 0}
+  /* ---- architecture diagram ---- */
+  .arch{margin:16px 0 6px}
+  .arch-node{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:center}
+  .arch-node.host{border-color:rgba(110,168,254,.45)}
+  .arch-node .big{font-weight:700}
+  .arch-node span{display:block;color:var(--muted);font-size:12.5px;margin-top:3px}
+  .arch-arrow{text-align:center;color:var(--muted);font-size:12.5px;padding:9px 0;line-height:1.4}
+  .arch-arrow b{color:var(--accent);font-weight:600}
+  .arch-servers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .arch-server{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .srv-name{font-weight:700}
+  .srv-pkg{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;color:var(--muted);margin:3px 0 9px;word-break:break-word}
+  .srv-back{border-top:1px dashed var(--line);padding-top:9px;font-size:13px}
+  .srv-toggle{color:var(--warn);font-size:11px;margin-top:7px}
+  .cap{color:var(--muted);font-size:13px;margin:8px 0 2px}
+  td .ok,td .bad,td .warn{font-weight:600}
   @media (max-width:640px){
     .wrap{padding:26px 15px 60px}
     h1{font-size:25px} h2{font-size:18px}
     table{min-width:520px}          /* keep columns legible; wrapper scrolls */
     pre{font-size:12px}
     .sim-tab{flex-basis:50%;min-width:0} .bubble{max-width:95%}
+    .arch-servers{grid-template-columns:1fr}
   }
 </style>
 </head>
@@ -156,6 +173,108 @@
 </div>
 <p>Each server reads its data <strong>fresh on every call</strong>. That is the whole trick: change a file
 between two questions and the next answer changes — no restart, no redeploy.</p>
+
+<h2>The data</h2>
+<p>All synthetic. Two SQLite databases and a folder of markdown — this is everything the assistant
+can see. Follow these rows through the simulator below.</p>
+
+<h3><code>reservations</code> · SQLite → <code>flights</code></h3>
+<div class="tablewrap">
+<table>
+  <tr><th>flight_id</th><th>airline</th><th>route</th><th>date</th><th>price_usd</th><th>seats_left</th></tr>
+  <tr><td><b>AA88</b></td><td>American</td><td>SJC → SAN (San Diego)</td><td>2026-08-22</td><td>149</td><td>9</td></tr>
+  <tr><td>UA210</td><td>United</td><td>SJC → SEA (Seattle)</td><td>2026-08-22</td><td>118</td><td>4</td></tr>
+  <tr><td><b>DL455</b></td><td>Delta</td><td>SJC → PHX (Phoenix)</td><td>2026-08-23</td><td>129</td><td>6</td></tr>
+  <tr><td>WN360</td><td>Southwest</td><td>SJC → LAS (Las Vegas)</td><td>2026-08-22</td><td>176</td><td>12</td></tr>
+  <tr><td>AS512</td><td>Alaska</td><td>SJC → PSP (Palm Springs)</td><td>2026-08-23</td><td>169</td><td>3</td></tr>
+</table>
+</div>
+<p class="cap">Cheapest overall is Seattle ($118) — but it's raining. <b>AA88 → San Diego ($149)</b> is the
+cheapest that's actually sunny. <b>DL455 → Phoenix ($129)</b> is the trap in Beat B.</p>
+
+<h3><code>reservations</code> · SQLite → <code>airports</code> (weather)</h3>
+<div class="tablewrap">
+<table>
+  <tr><th>code</th><th>city</th><th>weather</th><th>weather_as_of</th></tr>
+  <tr><td>SJC</td><td>San Jose</td><td>Cloudy</td><td>2026-08-22</td></tr>
+  <tr><td>SAN</td><td>San Diego</td><td><span class="ok">Sunny</span></td><td>2026-08-22</td></tr>
+  <tr><td>SEA</td><td>Seattle</td><td>Rain</td><td>2026-08-22</td></tr>
+  <tr><td>PHX</td><td>Phoenix</td><td><span class="bad">Storm</span></td><td>2026-08-22</td></tr>
+  <tr><td>LAS</td><td>Las Vegas</td><td><span class="ok">Sunny</span></td><td>2026-08-22</td></tr>
+  <tr><td>PSP</td><td>Palm Springs</td><td><span class="ok">Sunny</span></td><td>2026-08-22</td></tr>
+</table>
+</div>
+<p class="cap">This is the <b>current</b> snapshot: Phoenix is a <span class="bad">Storm</span> today. The
+<b>stale</b> snapshot (Beat B) is the same table frozen 5 days ago — every <code>weather_as_of</code> reads
+<code>2026-08-17</code> and Phoenix still says <span class="warn">Sunny</span>. Same data, older date → wrong answer.</p>
+
+<h3><code>reservations</code> · SQLite → <code>bookings</code></h3>
+<div class="tablewrap">
+<table>
+  <tr><th>booking_id</th><th>flight_id</th><th>passenger</th><th>miles_applied</th><th>status</th></tr>
+  <tr><td>BKG-5001</td><td>WN360</td><td>Sam Delgado</td><td>0</td><td>confirmed</td></tr>
+  <tr><td>BKG-5002</td><td>AS512</td><td>Priya Anand</td><td>8000</td><td>confirmed</td></tr>
+</table>
+</div>
+<p class="cap">Two seed bookings. When you click <em>Book it</em> in the simulator, the assistant
+<code>write_query</code>s a new <code>BKG-60xx</code> row here — a real write over MCP.</p>
+
+<h3><code>loyalty</code> · SQLite → <code>members</code></h3>
+<div class="tablewrap">
+<table>
+  <tr><th>name</th><th>miles_balance</th><th>tier</th></tr>
+  <tr><td><b>Jordan Rivera</b> (the traveler)</td><td>45,000</td><td>Gold</td></tr>
+  <tr><td>Sam Delgado</td><td>2,200</td><td>Member</td></tr>
+  <tr><td>Priya Anand</td><td>132,000</td><td>Platinum</td></tr>
+  <tr><td>Marcus Webb</td><td>6,100</td><td>Silver</td></tr>
+</table>
+</div>
+<p class="cap">Jordan has plenty of miles — so the happy path applies 12,000. In Beat C this whole table
+is unreachable (the DB file is swapped for junk), and the query errors.</p>
+
+<h3><code>policies</code> · filesystem → markdown</h3>
+<div class="tablewrap">
+<table>
+  <tr><th>file</th><th>current</th><th>stale (optional variant)</th></tr>
+  <tr><td><code>refund-policy.md</code></td><td>v2026.3 — non-refundable basic fares</td><td>v2025.4 — “fully refundable any time” (false)</td></tr>
+  <tr><td><code>baggage-policy.md</code></td><td>v2026.3</td><td>v2025.4</td></tr>
+</table>
+</div>
+<p class="cap">The filesystem server serves whatever is in <code>policy/active/</code>. A toggle swaps
+current ↔ stale — the RAG version of the stale-source failure.</p>
+
+<h2>How it's wired</h2>
+<p>One host, three servers, three backends. The host is any MCP client; the model decides which tools to call.</p>
+<div class="arch">
+  <div class="arch-node"><span class="big">🧑 Traveler — Jordan Rivera</span>
+    <span>“Book me a cheap flight somewhere sunny this weekend and use my miles.”</span></div>
+  <div class="arch-arrow">natural language ↓</div>
+  <div class="arch-node host"><span class="big">MCP Host / Client&nbsp;+&nbsp;model</span>
+    <span>Claude Desktop · Claude Code · any MCP-capable client</span></div>
+  <div class="arch-arrow"><b>MCP protocol</b> (JSON-RPC over stdio) ↓ &nbsp;three independent servers</div>
+  <div class="arch-servers">
+    <div class="arch-server">
+      <div class="srv-name">reservations</div>
+      <div class="srv-pkg">mcp-server-sqlite</div>
+      <div class="srv-back">🗄 <code>reservations.db</code><br>flights · airports · bookings</div>
+      <div class="srv-toggle">⇄ use-stale.sh swaps this file</div>
+    </div>
+    <div class="arch-server">
+      <div class="srv-name">loyalty</div>
+      <div class="srv-pkg">mcp-server-sqlite</div>
+      <div class="srv-back">🗄 <code>loyalty.db</code><br>members / miles</div>
+      <div class="srv-toggle">⇄ break-miles.sh corrupts this file</div>
+    </div>
+    <div class="arch-server">
+      <div class="srv-name">policies</div>
+      <div class="srv-pkg">server-filesystem</div>
+      <div class="srv-back">📁 <code>policy/active/</code><br>refund · baggage (.md)</div>
+      <div class="srv-toggle">⇄ use-stale-policy.sh swaps these</div>
+    </div>
+  </div>
+</div>
+<p class="cap">Because each server re-reads its backend on every call, the toggle scripts change behavior
+<strong>with no restart</strong>. That flexibility is the point of the demo — and the source of both failures.</p>
 
 <h2 id="try">See it happen — simulator</h2>
 <div class="note">
