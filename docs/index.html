@@ -47,6 +47,15 @@
   .cta:hover{text-decoration:none;filter:brightness(1.05)}
   footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px}
   .kbd{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:13px}
+  .laptop{border-left:3px solid var(--accent);background:rgba(110,168,254,.10);
+    padding:11px 14px;border-radius:0 8px 8px 0;margin:16px 0 4px;font-size:14.5px}
+  .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  @media (max-width:640px){
+    .wrap{padding:26px 15px 60px}
+    h1{font-size:25px} h2{font-size:18px}
+    table{min-width:520px}          /* keep columns legible; wrapper scrolls */
+    pre{font-size:12px}
+  }
 </style>
 </head>
 <body>
@@ -64,17 +73,22 @@
     <span class="pill">synthetic data</span>
     <span class="pill">MIT</span>
   </p>
+  <div class="laptop">📱 <strong>Scanned this on your phone?</strong> Perfect — you've saved the link.
+  The demo runs on a <strong>laptop or desktop</strong> (macOS, Linux, or Windows) with a terminal and a
+  desktop MCP client; there's nothing to install on mobile. Bookmark this page and open it on your computer.</div>
   <a class="cta" href="https://github.com/agnitrip/mcp-airline-demo">View the repo on GitHub →</a>
 </header>
 
 <h2>What it is</h2>
 <p>An assistant composes three separate back-end systems over MCP to book a trip:</p>
+<div class="tablewrap">
 <table>
   <tr><th>Server</th><th>Off-the-shelf package</th><th>Serves</th></tr>
   <tr><td><code>reservations</code></td><td><code>mcp-server-sqlite</code> (via <code>uvx</code>)</td><td>flights, per-airport weather, bookings</td></tr>
   <tr><td><code>loyalty</code></td><td><code>mcp-server-sqlite</code> (via <code>uvx</code>)</td><td>frequent-flyer members</td></tr>
   <tr><td><code>policies</code></td><td><code>@modelcontextprotocol/server-filesystem</code> (via <code>npx</code>)</td><td>refund + baggage rules (markdown)</td></tr>
 </table>
+</div>
 <p>Each server reads its data <strong>fresh on every call</strong>. That is the whole trick: change a file
 between two questions and the next answer changes — no restart, no redeploy.</p>
 
@@ -142,6 +156,7 @@ or as the first message in Claude Code):</p>
 <h2>4 · Run the four beats</h2>
 <p>Start a <strong>new chat</strong> for each beat and type the same request every time:</p>
 <pre><code>Book me a cheap flight somewhere sunny this weekend and use my miles. I'm Jordan Rivera.</code></pre>
+<div class="tablewrap">
 <table>
   <tr><th>Beat</th><th>Toggle (terminal)</th><th>Prompt</th><th>Outcome</th></tr>
   <tr>
@@ -169,6 +184,7 @@ or as the first message in Claude Code):</p>
     <td class="ok">Catches both: refuses on the error, flags the stale weather</td>
   </tr>
 </table>
+</div>
 <p>Reset any time with <code>./scripts/setup.sh</code>. Full narration, timing, and a monitor
 cheat-sheet are in
 <a href="https://github.com/agnitrip/mcp-airline-demo/blob/main/demo/demo-script.md">demo/demo-script.md</a>.</p>
