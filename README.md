@@ -84,9 +84,6 @@ mcp-airline-demo/
 │  ├─ break-miles.sh  reset-miles.sh         # Beat C (loyalty outage)
 │  ├─ use-current-policy.sh  use-stale-policy.sh   # optional RAG variant of B
 │  └─ loyalty_fallback/          # OPTIONAL server if the file-swap needs a backup
-├─ demo/
-│  ├─ demo-script.md             # per-beat prompts + narration + monitor cheat-sheet
-│  └─ rehearsal-checklist.md     # dry-run + backup-video checklist
 ├─ docs/                         # the "run it in 5 minutes" GitHub Pages one-pager
 ├─ FIX-sqlite-server-pin.md      # why the config pins mcp[cli]<2
 └─ LICENSE                       # MIT
@@ -139,7 +136,9 @@ paths). The `--with "mcp[cli]<2"` pin is **required** — see
 Then **fully quit and reopen** the host and confirm all three servers connect.
 
 **4. Set the assistant instructions** to [`prompts/assistant-base.md`](prompts/assistant-base.md)
-(the naive build) and follow [`demo/demo-script.md`](demo/demo-script.md).
+(the naive build), then run the four beats from the table above — one toggle, a new chat, and the
+same request each time. Swap to [`prompts/assistant-guardrailed.md`](prompts/assistant-guardrailed.md)
+for Beat D.
 
 The traveler's request, typed verbatim each beat:
 > `Book me a cheap flight somewhere sunny this weekend and use my miles. I'm Jordan Rivera.`

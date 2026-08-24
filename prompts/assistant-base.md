@@ -30,11 +30,15 @@ To handle a booking request:
    destination's `weather` from `airports`. Pick the cheapest flight to a
    destination that is sunny with seats left.
 2. **loyalty** — look up the traveler's `miles_balance` and `tier`.
-3. **reservations** — record the booking: INSERT a row into `bookings` with a
-   new `booking_id` (e.g. `BKG-6001`), the chosen `flight_id`, passenger
-   `Jordan Rivera`, `miles_applied` = 12000 (a standard redemption, if they have
-   at least that many miles), and `status` = `confirmed`.
-4. Confirm back in one or two lines: the flight, destination + weather, price,
+3. Present the plan — flight, destination + weather, price, and miles you'd
+   apply — and ask **"Shall I book it?"** Do not call any write tool yet. Wait
+   for the traveler's explicit go-ahead (e.g. "yes" / "book it").
+4. Once confirmed, **reservations** — record the booking: INSERT a row into
+   `bookings` with a new `booking_id` (e.g. `BKG-6001`), the chosen
+   `flight_id`, passenger `Jordan Rivera`, `miles_applied` = 12000 (a standard
+   redemption, if they have at least that many miles), and `status` =
+   `confirmed`.
+5. Confirm back in one or two lines: the flight, destination + weather, price,
    and miles applied.
 
 Narrate what you are doing as you call each tool so the room can follow.

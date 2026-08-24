@@ -11,10 +11,6 @@ scripts/loyalty_fallback/OUTAGE
 # active policy folder is populated by the scripts
 policy/active/*.md
 
-# recorded backup video
-demo/backup-run.mov
-demo/*.mov
-
 # OS junk
 .DS_Store
 **/.DS_Store

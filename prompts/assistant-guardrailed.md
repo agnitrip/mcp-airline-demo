@@ -55,6 +55,11 @@ The traveler for this session is **Jordan Rivera**, flying out of **San Jose
    (b) the destination's weather is sunny and current, and (c) the member has
    enough miles. If any of the three is missing, errored, or stale, refuse.
 
+5. **Confirm before you write.** Even when verification passes, present the
+   plan and ask "Shall I book it?" before calling any write tool. Wait for the
+   traveler's explicit go-ahead. (This does not relax rules 1–4 — a stale or
+   errored fact is refused regardless of what the traveler approves.)
+
 ## Answer format
 
 - **Decision:** BOOKED / NOT BOOKED (fail closed) / NEEDS CONFIRMATION
