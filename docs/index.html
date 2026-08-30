@@ -444,6 +444,17 @@ def book_flight(flight_id: str, passenger: str,
 <div class="laptop-banner">🖥 <b>Laptop / desktop only.</b> Running the demo needs a terminal and a desktop MCP client.
 There's nothing to install on a phone. macOS, Linux, and Windows all work.</div>
 
+<div class="note" style="border-left-color:var(--accent);background:rgba(110,168,254,.08)">
+  <strong>Prefer to watch first?</strong> Here is a real run: three real MCP servers over stdio, a real
+  model, and live tool calls (not the simulation above). It plays all four beats end to end.
+</div>
+<video controls preload="metadata" poster="airline-demo-real-run-poster.jpg"
+       style="width:100%;max-width:940px;display:block;margin:14px auto 6px;border:1px solid var(--line);border-radius:12px;background:#000">
+  <source src="airline-demo-real-run.mp4" type="video/mp4">
+  Your browser can’t play embedded video. <a href="airline-demo-real-run.mp4">Download the MP4</a>.
+</video>
+<p class="cap" style="text-align:center;margin-top:4px">Real MCP host session · Claude Sonnet 4.6 · synthetic data · ~2 min. reservations · loyalty · policies.</p>
+
 <h2>Prerequisites</h2>
 <ul>
   <li><a href="https://docs.astral.sh/uv/">uv</a> runs the three purpose-built Python servers and
