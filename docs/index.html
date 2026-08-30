@@ -193,10 +193,10 @@
   <h1>MCP Airline Demo</h1>
   <p class="sub">The companion to the IEEE talk <em>“Connecting Enterprise AI Using MCP.”</em></p>
   <p class="lede">One request — <strong>“Book me a cheap flight somewhere sunny this weekend and use my miles”</strong> —
-  run four ways: the happy path, two ways it silently goes wrong, and the fix. Everything is
+  run four ways: the happy path, two ways it goes wrong, and the fix. Everything is
   <strong>synthetic and open-source</strong>. Tool-neutral: any MCP-capable client works.</p>
   <p style="margin-top:16px">
-    <span class="pill">3 off-the-shelf MCP servers</span>
+    <span class="pill">3 purpose-built MCP servers</span>
     <span class="pill">no restarts between beats</span>
     <span class="pill">synthetic data</span>
     <span class="pill">MIT</span>
@@ -266,8 +266,8 @@ cheapest that's actually sunny. <b>DL455 → Phoenix ($129)</b> is the trap in B
   <tr><td>BKG-5002</td><td>AS512</td><td>Priya Anand</td><td>8000</td><td>confirmed</td></tr>
 </table>
 </div>
-<p class="cap">Two seed bookings. When you click <em>Book it</em> in the simulator, the assistant
-<code>write_query</code>s a new <code>BKG-60xx</code> row here — a real write over MCP.</p>
+<p class="cap">Two seed bookings. When you click <em>Book it</em> in the simulator, the assistant calls
+<code>book_flight</code>, which writes a new <code>BKG-60xx</code> row here — a real, scoped write over MCP.</p>
 
 <h3><code>loyalty</code> · SQLite → <code>members</code></h3>
 <div class="tablewrap">
@@ -335,8 +335,8 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
       <div class="lanes">
       <div class="lane">
         <div class="lnode server" data-node="reservations"><span class="ntype">MCP Server</span>
-          <div class="lname">reservations</div><div class="lsub">mcp-server-sqlite</div>
-          <div class="lsub tools">read_query · write_query</div></div>
+          <div class="lname">reservations</div><div class="lsub">purpose-built · Python</div>
+          <div class="lsub tools">search_flights · book_flight</div></div>
         <div class="lwire sm">↓ reads / writes</div>
         <div class="lnode db" data-node="reservations"><span class="ntype">Database · SQLite</span>
           <div class="lname">reservations.db</div><div class="lsub">flights · airports · bookings</div></div>
@@ -344,8 +344,8 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
 
       <div class="lane">
         <div class="lnode server" data-node="loyalty"><span class="ntype">MCP Server</span>
-          <div class="lname">loyalty</div><div class="lsub">mcp-server-sqlite</div>
-          <div class="lsub tools">read_query</div></div>
+          <div class="lname">loyalty</div><div class="lsub">purpose-built · Python</div>
+          <div class="lsub tools">check_miles</div></div>
         <div class="lwire sm">↓ reads</div>
         <div class="lnode db" data-node="loyalty"><span class="ntype">Database · SQLite</span>
           <div class="lname">loyalty.db</div><div class="lsub">members · miles · tier</div></div>
@@ -353,8 +353,8 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
 
       <div class="lane">
         <div class="lnode server" data-node="policies"><span class="ntype">MCP Server</span>
-          <div class="lname">policies</div><div class="lsub">server-filesystem</div>
-          <div class="lsub tools">read_file · list_directory</div></div>
+          <div class="lname">policies</div><div class="lsub">purpose-built · Python</div>
+          <div class="lsub tools">search_policies</div></div>
         <div class="lwire sm">↓ reads</div>
         <div class="lnode fs" data-node="policies"><span class="ntype">File store</span>
           <div class="lname">policy/active/</div><div class="lsub">refund · baggage (.md)</div></div>
@@ -369,7 +369,7 @@ the demo, and the source of both failures.</p>
 
 <div class="card">
   <strong>The takeaway.</strong> MCP makes it easy to compose real systems (Beat A). The same
-  flexibility means a stale source (B) or a silent tool error (C) produces a confident wrong answer.
+  flexibility means a stale source (B) or an unhandled tool error (C) produces a confident wrong answer.
   The fix is not more servers — it's a rule: <em>quote your source, fail closed</em> (D). A system
   prompt here; code in production.
 </div>
@@ -385,13 +385,15 @@ there's nothing to install on a phone. macOS, Linux, and Windows all work.</div>
 
 <h2>Prerequisites</h2>
 <ul>
-  <li><a href="https://docs.astral.sh/uv/">uv</a> — runs the SQLite server:
+  <li><a href="https://docs.astral.sh/uv/">uv</a> — runs the three purpose-built Python servers and
+      provisions the pinned <code>mcp</code> SDK on first launch:
       <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></li>
-  <li><a href="https://nodejs.org/">Node.js</a> — runs the filesystem server via <code>npx</code></li>
   <li>A desktop <strong>MCP client</strong> — e.g. <a href="https://claude.ai/download">Claude Desktop</a>,
       <a href="https://docs.claude.com/en/docs/claude-code">Claude Code</a>, or the
       <a href="https://github.com/openai/codex">OpenAI Codex CLI</a>. Any MCP-capable host works.</li>
   <li>Python 3 (stdlib only) — seeds the synthetic databases</li>
+  <li><a href="https://nodejs.org/">Node.js</a> — <em>optional</em>, only for the off-the-shelf fallback
+      setup (the filesystem server via <code>npx</code>)</li>
 </ul>
 
 <h2>1 · Clone &amp; seed</h2>
@@ -401,38 +403,49 @@ cd mcp-airline-demo
 ./scripts/status.sh       # -> reservations CURRENT, loyalty healthy, policies CURRENT</code></pre>
 
 <h2>2 · Wire the MCP host</h2>
-<p>Add the three servers to your client's config. Replace
-<code>/ABSOLUTE/PATH/TO/mcp-airline-demo</code> with the real path — SQLite needs absolute paths.</p>
+<p>Add the three purpose-built servers to your client's config. Replace
+<code>/ABSOLUTE/PATH/TO/mcp-airline-demo</code> with the real path — the host needs the absolute path
+to each server script.</p>
 <pre><code>{
   "mcpServers": {
     "reservations": {
-      "command": "uvx",
-      "args": ["--with", "mcp[cli]&lt;2", "mcp-server-sqlite",
-               "--db-path", "/ABSOLUTE/PATH/TO/mcp-airline-demo/data/reservations.db"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp[cli]&lt;2",
+               "/ABSOLUTE/PATH/TO/mcp-airline-demo/servers/reservations_server.py"]
     },
     "loyalty": {
-      "command": "uvx",
-      "args": ["--with", "mcp[cli]&lt;2", "mcp-server-sqlite",
-               "--db-path", "/ABSOLUTE/PATH/TO/mcp-airline-demo/data/loyalty.db"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp[cli]&lt;2",
+               "/ABSOLUTE/PATH/TO/mcp-airline-demo/servers/loyalty_server.py"]
     },
     "policies": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem",
-               "/ABSOLUTE/PATH/TO/mcp-airline-demo/policy/active"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp[cli]&lt;2",
+               "/ABSOLUTE/PATH/TO/mcp-airline-demo/servers/policies_server.py"]
     }
   }
 }</code></pre>
 <div class="note">
-  <strong>The <code>--with "mcp[cli]&lt;2"</code> pin is required.</strong> Plain
-  <code>uvx mcp-server-sqlite</code> pulls the <code>mcp</code> SDK 2.x, and the archived reference
-  server crashes on it (<code>'Server' object has no attribute 'list_resources'</code>). The pin holds it
-  at 1.x. See <a href="https://github.com/agnitrip/mcp-airline-demo/blob/main/FIX-sqlite-server-pin.md">FIX-sqlite-server-pin.md</a>.
+  <strong>The <code>--with "mcp[cli]&lt;2"</code> pin is required.</strong> The servers target the 1.x
+  low-level SDK; the plain <code>mcp</code> SDK now resolves to 2.x and 1.x-era servers crash on it
+  (<code>'Server' object has no attribute 'list_resources'</code>). The pin holds it at 1.x. Each server
+  also declares the pin inline via <a href="https://peps.python.org/pep-0723/">PEP 723</a> metadata, so
+  <code>uv run</code> provisions it automatically. See
+  <a href="https://github.com/agnitrip/mcp-airline-demo/blob/main/FIX-sqlite-server-pin.md">FIX-sqlite-server-pin.md</a>.
 </div>
 <p><strong>Claude Desktop</strong> (macOS): put this in
-<code>~/Library/Application Support/Claude/claude_desktop_config.json</code>.
-<strong>Claude Code</strong>: save as <code>.mcp.json</code> in the project root.
+<code>~/Library/Application Support/Claude/claude_desktop_config.json</code> — a ready copy is in
+<code>config/claude_desktop_config.json</code>.
+<strong>Claude Code</strong>: save as <code>.mcp.json</code> in the project root (<code>config/mcp.json</code>).
 Then <strong>fully quit and reopen</strong> the host and confirm all three servers connect.
-If the host can't find <code>uvx</code>, use its absolute path (<code>which uvx</code>).</p>
+If the host can't find <code>uv</code>, use its absolute path (<code>which uv</code>).</p>
+<div class="note">
+  <strong>Off-the-shelf fallback.</strong> A proven variant using the reference
+  <code>mcp-server-sqlite</code> and <code>@modelcontextprotocol/server-filesystem</code> (generic
+  <code>read_query</code> / <code>read_file</code> tools) is committed as <code>config/*.generic.json</code>
+  and <code>prompts/*.generic.md</code> — <code>cp</code> those over the live config and prompt if a
+  purpose-built server ever misbehaves on stage. The beats behave the same; only the tool names differ.
+</div>
 
 <h2>3 · The two prompts</h2>
 <p>Set the assistant's instructions to one of these (paste as Project instructions in Claude Desktop,
@@ -493,23 +506,23 @@ or as the first message in Claude Code):</p>
   var REQ = "Book me a cheap flight somewhere sunny this weekend and use my miles. I'm Jordan Rivera.";
   // maps each MCP server to the backend system it fronts (shown on every tool call)
   var SYS = {
-    reservations: "SQLite DB · uvx",
-    loyalty:      "SQLite DB · uvx",
-    policies:     "filesystem · npx"
+    reservations: "SQLite DB · Python",
+    loyalty:      "SQLite DB · Python",
+    policies:     "policy docs · Python"
   };
   var BEATS = {
     A: {
       state: {res:["CURRENT","good"], loy:["healthy","good"], asst:["no guardrail","warn"]},
-      point: {cls:"good", text:"Three off-the-shelf servers composed live — and it confirmed before booking."},
+      point: {cls:"good", text:"Three purpose-built servers composed live — and it confirmed before booking."},
       steps: [
         {t:"user", text:REQ},
-        {t:"tool", server:"reservations", act:"read_query — weekend flights + airport weather",
+        {t:"tool", server:"reservations", act:"search_flights — weekend flights + airport weather",
          res:"SEA $118 Rain · PHX $129 Storm · SAN $149 Sunny · PSP $169 Sunny · LAS $176 Sunny  (all as_of today)"},
         {t:"think", text:"cheapest that's actually sunny → San Diego. Skips Seattle (rain) and Phoenix (storm)."},
-        {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", res:"45,000 miles · Gold  ✓"},
+        {t:"tool", server:"loyalty", act:"check_miles — Jordan Rivera", res:"45,000 miles · Gold  ✓"},
         {t:"answer", cls:"", text:"Here's what I found: AA88 to San Diego — sunny, $149, and I can apply 12,000 of your 45,000 miles. Shall I book it?"},
         {t:"choice"},
-        {t:"tool", server:"reservations", act:"write_query — insert booking BKG-6001", res:"confirmed  ✓"},
+        {t:"tool", server:"reservations", act:"book_flight — AA88 → BKG-6001", res:"confirmed  ✓"},
         {t:"answer", cls:"good", text:"Booked AA88 to San Diego — sunny, $149 — 12,000 miles applied. Confirmation BKG-6001."}
       ]
     },
@@ -519,13 +532,13 @@ or as the first message in Claude Code):</p>
       steps: [
         {t:"note", text:"You ran ./scripts/use-stale.sh — reservations now serves a snapshot from 5 days ago."},
         {t:"user", text:REQ},
-        {t:"tool", server:"reservations", act:"read_query — weekend flights + airport weather",
+        {t:"tool", server:"reservations", act:"search_flights — weekend flights + airport weather",
          res:"PHX $129 Sunny (weather_as_of 2026-08-17) · SAN $149 Sunny · SEA $118 Rain · …"},
         {t:"think", text:"cheapest sunny → Phoenix $129."},
-        {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", res:"45,000 miles · Gold  ✓"},
+        {t:"tool", server:"loyalty", act:"check_miles — Jordan Rivera", res:"45,000 miles · Gold  ✓"},
         {t:"answer", cls:"", text:"Here's what I found: DL455 to Phoenix — showing sunny, $129, and I can apply 12,000 miles. Shall I book it?"},
         {t:"choice"},
-        {t:"tool", server:"reservations", act:"write_query — insert booking BKG-6002", res:"confirmed  ✓"},
+        {t:"tool", server:"reservations", act:"book_flight — DL455 → BKG-6002", res:"confirmed  ✓"},
         {t:"answer", cls:"bad", text:"Booked DL455 to Phoenix — sunny, $129 — 12,000 miles applied."},
         {t:"reality", text:"Reality: Phoenix is under a storm. The weather field was 5 days stale (weather_as_of 2026-08-17) — and the confirmation didn't save you, because you approved the same stale “Sunny.” Right reasoning, dead source."}
       ]
@@ -536,13 +549,13 @@ or as the first message in Claude Code):</p>
       steps: [
         {t:"note", text:"You ran ./scripts/break-miles.sh — the loyalty DB was swapped for a non-database file."},
         {t:"user", text:REQ},
-        {t:"tool", server:"reservations", act:"read_query — weekend flights + airport weather",
+        {t:"tool", server:"reservations", act:"search_flights — weekend flights + airport weather",
          res:"SAN $149 Sunny (as_of today)  ✓"},
         {t:"think", text:"cheapest sunny → San Diego."},
-        {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", err:true, res:"✕ ERROR: file is not a database"},
+        {t:"tool", server:"loyalty", act:"check_miles — Jordan Rivera", err:true, res:"✕ ERROR: file is not a database"},
         {t:"answer", cls:"", text:"Here's what I found: AA88 to San Diego — sunny, $149. Heads up — I couldn't reach the loyalty system to confirm your miles, but I can still book. Shall I book it?"},
         {t:"choice"},
-        {t:"tool", server:"reservations", act:"write_query — insert booking BKG-6003", res:"confirmed  ✓"},
+        {t:"tool", server:"reservations", act:"book_flight — AA88 → BKG-6003", res:"confirmed  ✓"},
         {t:"answer", cls:"bad", text:"Booked AA88 to San Diego, $149 — applied 12,000 miles (unverified)."},
         {t:"reality", text:"It offered to book and went ahead despite never confirming your miles — fail OPEN."}
       ]
@@ -554,13 +567,13 @@ or as the first message in Claude Code):</p>
         {t:"note", text:"Same broken tool + same stale data. Only change: the guardrailed prompt (quote your source, fail closed)."},
         {t:"divider", text:"Re-run B — stale weather"},
         {t:"user", text:REQ},
-        {t:"tool", server:"reservations", act:"read_query — weekend flights + airport weather",
+        {t:"tool", server:"reservations", act:"search_flights — weekend flights + airport weather",
          res:"PHX $129 Sunny — weather_as_of 2026-08-17"},
         {t:"guard", text:"weather_as_of is 5 days old (> 2-day limit) → STALE. Cannot rely on it."},
         {t:"answer", cls:"good", text:"NOT BOOKED. Phoenix weather is 5 days stale (reservations, as_of 2026-08-17). I won't book on unverified conditions — refresh the snapshot or confirm current weather."},
         {t:"divider", text:"Re-run C — loyalty error"},
         {t:"user", text:REQ},
-        {t:"tool", server:"loyalty", act:"read_query — member Jordan Rivera", err:true, res:"✕ ERROR: file is not a database"},
+        {t:"tool", server:"loyalty", act:"check_miles — Jordan Rivera", err:true, res:"✕ ERROR: file is not a database"},
         {t:"guard", text:"required fact (miles balance) could not be verified from loyalty."},
         {t:"answer", cls:"good", text:"NOT BOOKED. The loyalty server errored — I can't confirm your miles, so I'm failing closed rather than booking."}
       ]

@@ -1,16 +1,16 @@
 {
   "mcpServers": {
     "reservations": {
-      "command": "uvx",
-      "args": ["--with", "mcp[cli]<2", "mcp-server-sqlite", "--db-path", "/Users/agnitripathi/mcp-airline-demo/data/reservations.db"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp[cli]<2", "/Users/agnitripathi/mcp-airline-demo/servers/reservations_server.py"]
     },
     "loyalty": {
-      "command": "uvx",
-      "args": ["--with", "mcp[cli]<2", "mcp-server-sqlite", "--db-path", "/Users/agnitripathi/mcp-airline-demo/data/loyalty.db"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp[cli]<2", "/Users/agnitripathi/mcp-airline-demo/servers/loyalty_server.py"]
     },
     "policies": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/agnitripathi/mcp-airline-demo/policy/active"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp[cli]<2", "/Users/agnitripathi/mcp-airline-demo/servers/policies_server.py"]
     }
   }
 }

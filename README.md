@@ -17,32 +17,41 @@ Desktop because it is a convenient off-the-shelf host.
 
 ## Prerequisites
 
-- **[uv](https://docs.astral.sh/uv/)** — runs the SQLite MCP server via `uvx`
-  (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
-- **[Node.js](https://nodejs.org/)** — runs the filesystem MCP server via `npx`.
+- **[uv](https://docs.astral.sh/uv/)** — runs the three Python MCP servers via
+  `uv run` (`curl -LsSf https://astral.sh/uv/install.sh | sh`). It also
+  provisions the pinned `mcp` SDK on first launch — no manual `pip install`.
 - **An MCP client** — e.g. [Claude Desktop](https://claude.ai/download) or
   [Claude Code](https://docs.claude.com/en/docs/claude-code). Any MCP host works.
 - **Python 3** (stdlib only) — seeds the synthetic databases.
 
 ## What's wired
 
-Three off-the-shelf MCP servers, one MCP host (Claude Desktop or Claude Code):
+Three thin, purpose-built MCP servers (Python, `mcp` SDK), one MCP host (Claude
+Desktop or Claude Code). Each wraps a synthetic backend and exposes **named
+domain tools** — the shape the talk slides teach — instead of generic SQL:
 
-| Server (public name) | Off-the-shelf package | Serves |
-|---|---|---|
-| `reservations` | `mcp-server-sqlite` (reference, via `uvx`) | `data/reservations.db` — flights, per-airport weather, bookings |
-| `loyalty`      | `mcp-server-sqlite` (reference, via `uvx`) | `data/loyalty.db` — frequent-flyer members (traveler = Jordan Rivera) |
-| `policies`     | `@modelcontextprotocol/server-filesystem` (via `npx`) | `policy/active/` — refund + baggage rules (markdown, for the RAG beat) |
+| Server (public name) | Code | Tools | Wraps |
+|---|---|---|---|
+| `reservations` | [`servers/reservations_server.py`](servers/reservations_server.py) | `search_flights`, `book_flight` | `data/reservations.db` — flights, per-airport weather, bookings |
+| `loyalty`      | [`servers/loyalty_server.py`](servers/loyalty_server.py) | `check_miles` | `data/loyalty.db` — frequent-flyer members (traveler = Jordan Rivera) |
+| `policies`     | [`servers/policies_server.py`](servers/policies_server.py) | `search_policies` | `policy/active/` — refund + baggage rules (markdown, for the RAG beat) |
 
-The two failures are simple toggles, **no app restart** (the SQLite server
-reconnects to the DB file per query; the filesystem server reads fresh per call):
+Each tool opens its backend **fresh on every call** (a new SQLite connection, or
+a fresh directory read) and closes it. Nothing is cached — that is what makes the
+file-swap toggles work with **no app restart**:
 
 - **Beat B (stale source):** `use-stale.sh` swaps `reservations.db` for a
   5-day-old weather snapshot in which Phoenix still reads *Sunny* — it's really a
-  storm now. The assistant confidently books Phoenix.
+  storm now. `search_flights` returns that stale `weather_as_of`; the naive
+  assistant confidently books Phoenix.
 - **Beat C (tool failure):** `break-miles.sh` swaps the loyalty DB for a
-  non-database file; the SQLite server errors on its next query. The naive
-  assistant books anyway (fail open).
+  non-database file; `check_miles` **raises** on its next call (it never returns
+  a fake balance). The naive assistant books anyway (fail open).
+
+> **Off-the-shelf fallback.** A proven all-off-the-shelf variant (reference
+> `mcp-server-sqlite` + `@modelcontextprotocol/server-filesystem`, generic SQL
+> tools) is committed as `config/*.generic.json` and `prompts/*.generic.md`. See
+> [Fallback](#fallback-off-the-shelf-servers) to switch to it.
 
 The guardrail (Beat D) is a **system-prompt rule** — the thinnest thing that
 reliably shows *quote-your-source + fail-closed*, with nothing extra to crash on
@@ -62,6 +71,10 @@ stage. In production you'd enforce the same two rules in code (the talk's
 ```
 mcp-airline-demo/
 ├─ README.md
+├─ servers/
+│  ├─ reservations_server.py     # search_flights, book_flight  (wraps reservations.db)
+│  ├─ loyalty_server.py          # check_miles                  (wraps loyalty.db)
+│  └─ policies_server.py         # search_policies              (wraps policy/active/)
 ├─ data/
 │  ├─ seed.py                    # builds all DBs (stdlib sqlite3 only)
 │  ├─ reservations-current.db    # generated: fresh weather (San Diego sunny, Phoenix storm)
@@ -74,10 +87,12 @@ mcp-airline-demo/
 │  └─ active/   ...                                    # what policies serves (copied in)
 ├─ prompts/
 │  ├─ assistant-base.md          # naive assistant (Beats A/B/C)
-│  └─ assistant-guardrailed.md   # guardrail (Beat D)
+│  ├─ assistant-guardrailed.md   # guardrail (Beat D)
+│  └─ *.generic.md               # fallback prompts for the off-the-shelf setup
 ├─ config/
-│  ├─ claude_desktop_config.json # Claude Desktop host config (absolute uvx path)
-│  └─ mcp.json                   # Claude Code (.mcp.json) host config
+│  ├─ claude_desktop_config.json # Claude Desktop host config (purpose-built servers)
+│  ├─ mcp.json                   # Claude Code (.mcp.json) host config
+│  └─ *.generic.json             # fallback config for the off-the-shelf setup
 ├─ scripts/
 │  ├─ setup.sh  status.sh
 │  ├─ use-current.sh  use-stale.sh           # Beat B (reservations snapshot)
@@ -102,27 +117,30 @@ cd mcp-airline-demo
 ```
 
 **3. Wire the MCP host.** Add the three servers to your client's config. Replace
-`/ABSOLUTE/PATH/TO/mcp-airline-demo` with the real path (SQLite needs absolute
-paths). The `--with "mcp[cli]<2"` pin is **required** — see
-[Troubleshooting](#troubleshooting).
+`/ABSOLUTE/PATH/TO/mcp-airline-demo` with the real path (the servers resolve
+their data files relative to their own location, but the host needs the absolute
+path to each script). The `--with "mcp[cli]<2"` pin keeps the SDK on 1.x — see
+[Troubleshooting](#troubleshooting). (Each server also declares that pin inline
+via [PEP 723](https://peps.python.org/pep-0723/) metadata, so `uv run` provisions
+it automatically.)
 
 ```jsonc
 {
   "mcpServers": {
     "reservations": {
-      "command": "uvx",
-      "args": ["--with", "mcp[cli]<2", "mcp-server-sqlite",
-               "--db-path", "/ABSOLUTE/PATH/TO/mcp-airline-demo/data/reservations.db"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp[cli]<2",
+               "/ABSOLUTE/PATH/TO/mcp-airline-demo/servers/reservations_server.py"]
     },
     "loyalty": {
-      "command": "uvx",
-      "args": ["--with", "mcp[cli]<2", "mcp-server-sqlite",
-               "--db-path", "/ABSOLUTE/PATH/TO/mcp-airline-demo/data/loyalty.db"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp[cli]<2",
+               "/ABSOLUTE/PATH/TO/mcp-airline-demo/servers/loyalty_server.py"]
     },
     "policies": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem",
-               "/ABSOLUTE/PATH/TO/mcp-airline-demo/policy/active"]
+      "command": "uv",
+      "args": ["run", "--with", "mcp[cli]<2",
+               "/ABSOLUTE/PATH/TO/mcp-airline-demo/servers/policies_server.py"]
     }
   }
 }
@@ -130,7 +148,7 @@ paths). The `--with "mcp[cli]<2"` pin is **required** — see
 
 - **Claude Desktop:** put this in `~/Library/Application Support/Claude/claude_desktop_config.json`
   (macOS). A ready copy is in [`config/claude_desktop_config.json`](config/claude_desktop_config.json).
-  If the host can't find `uvx`, use its absolute path (`which uvx`).
+  If the host can't find `uv`, use its absolute path (`which uv`).
 - **Claude Code:** save as `.mcp.json` in the project root — see [`config/mcp.json`](config/mcp.json).
 
 Then **fully quit and reopen** the host and confirm all three servers connect.
@@ -152,16 +170,32 @@ The traveler's request, typed verbatim each beat:
   assistant plus a system-prompt guardrail: *quote your source* and *fail closed*
   on missing / errored / stale data. Used for Beat D; it catches both failures.
 
+## Fallback (off-the-shelf servers)
+
+If a purpose-built server misbehaves on stage, switch back to the proven
+all-off-the-shelf setup (reference `mcp-server-sqlite` + filesystem server,
+generic SQL/file tools) in seconds — it's committed:
+
+```bash
+cp config/claude_desktop_config.generic.json config/claude_desktop_config.json  # Claude Desktop
+cp config/mcp.generic.json                    config/mcp.json                    # Claude Code
+```
+
+Then use `prompts/assistant-base.generic.md` / `prompts/assistant-guardrailed.generic.md`
+(they drive the generic `read_query` / `read_file` tools), copy the config into
+the host's live location, and fully restart the host. The `@modelcontextprotocol/server-filesystem`
+fallback needs Node.js (`npx`); the reference SQLite server needs `uvx`. The
+demo beats behave identically — only the tool names differ.
+
 ## Troubleshooting
 
-**SQLite servers show "Server disconnected" / fail to start.** `uvx
-mcp-server-sqlite` pulls the `mcp` SDK, which now resolves to 2.x, and the
-archived reference server crashes on it
-(`AttributeError: 'Server' object has no attribute 'list_resources'`). Pin the
-SDK to 1.x by adding `--with "mcp[cli]<2"` before `mcp-server-sqlite` in the args
-(already done in the config above). Full note:
-[`FIX-sqlite-server-pin.md`](FIX-sqlite-server-pin.md). The filesystem server is
-unaffected.
+**Servers show "Server disconnected" / fail to start.** The `mcp` SDK now
+resolves to 2.x, and 1.x-era servers crash on it
+(`AttributeError: 'Server' object has no attribute 'list_resources'`). The three
+purpose-built servers here target the 1.x low-level SDK, so the config pins it
+with `--with "mcp[cli]<2"` (and each script repeats that pin inline via PEP 723
+metadata). Keep the pin. Full note:
+[`FIX-sqlite-server-pin.md`](FIX-sqlite-server-pin.md).
 
 **A beat gives the "too smart" answer** (e.g. Beat B books San Diego, or flags
 the storm). You probably reused a chat that still had fresh data in context.

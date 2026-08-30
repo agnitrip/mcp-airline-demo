@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "reservations": {
+      "command": "uvx",
+      "args": ["--with", "mcp[cli]<2", "mcp-server-sqlite", "--db-path", "/Users/agnitripathi/mcp-airline-demo/data/reservations.db"]
+    },
+    "loyalty": {
+      "command": "uvx",
+      "args": ["--with", "mcp[cli]<2", "mcp-server-sqlite", "--db-path", "/Users/agnitripathi/mcp-airline-demo/data/loyalty.db"]
+    },
+    "policies": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/agnitripathi/mcp-airline-demo/policy/active"]
+    }
+  }
+}
