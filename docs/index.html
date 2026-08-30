@@ -147,6 +147,14 @@
   .arch-legend{margin-top:12px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 12px;line-height:1.5}
   .arch-legend b{color:var(--warn);font-weight:600}
   .cap{color:var(--muted);font-size:13px;margin:10px 0 20px}
+  details.toolcode{margin:18px 0 6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:2px 16px}
+  details.toolcode > summary{cursor:pointer;padding:13px 0;font-weight:700;color:var(--ink);list-style:none}
+  details.toolcode > summary::-webkit-details-marker{display:none}
+  details.toolcode > summary::before{content:"\25B8  ";color:var(--accent)}
+  details.toolcode[open] > summary::before{content:"\25BE  "}
+  details.toolcode h4{font:600 12.5px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--accent);margin:14px 0 6px;letter-spacing:.02em}
+  details.toolcode pre{margin:0 0 14px}
+  details.toolcode .cap{margin:2px 0 12px}
   td .ok,td .bad,td .warn{font-weight:600}
   /* ---- side-by-side architecture + simulator ---- */
   .showcase{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);gap:22px;align-items:start;
@@ -369,6 +377,57 @@ current ↔ stale. The RAG version of the stale-source failure.</p>
 <p class="cap">Each server re-reads its backend on <strong>every call</strong>, so the toggle scripts
 (<b>use-stale.sh</b>, <b>break-miles.sh</b>) change behavior with <strong>no restart</strong>, the point of
 the demo, and the source of both failures.</p>
+
+<details class="toolcode">
+  <summary>Show the tool code (what a tool actually is)</summary>
+  <p class="cap">A tool is a decorated Python function. Two from the <code>reservations</code> server: one read, one write. Excerpts; full source in <a href="https://github.com/agnitrip/mcp-airline-demo/blob/main/servers/reservations_server.py"><code>servers/reservations_server.py</code></a>.</p>
+  <h4>search_flights &middot; the read (joins in the weather)</h4>
+  <pre><code>@mcp.tool()
+def search_flights(origin: str = "SJC", date: str | None = None) -&gt; list[dict]:
+    """This weekend's flights leaving `origin`, each row carrying the
+    destination's current weather and how fresh it is (weather_as_of),
+    sorted cheapest first."""
+    con = _connect()                      # opens reservations.db FRESH every call
+    try:
+        rows = con.execute(
+            "SELECT f.flight_id, f.airline, f.origin, f.destination, "
+            "       a.city, f.date, f.price_usd, f.seats_left, "
+            "       a.weather, a.weather_as_of "
+            "FROM flights f "
+            "LEFT JOIN airports a ON f.destination = a.code "
+            "WHERE f.origin = ? ORDER BY f.price_usd ASC",
+            [origin],                     # optional date filter elided
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        con.close()</code></pre>
+  <h4>book_flight &middot; the scoped write (one row, nothing else)</h4>
+  <pre><code>@mcp.tool()
+def book_flight(flight_id: str, passenger: str,
+                miles_to_apply: int = 12000, seat: str | None = None) -&gt; dict:
+    """SCOPED WRITE: insert exactly ONE confirmed booking row and nothing
+    else. No arbitrary SQL; cannot read or modify anything but this insert."""
+    con = _connect()
+    try:
+        # refuse to book a flight that does not exist
+        if con.execute("SELECT 1 FROM flights WHERE flight_id = ?",
+                       (flight_id,)).fetchone() is None:
+            raise ValueError(f"no such flight: {flight_id}")
+
+        # ... mint a fresh BKG-60xx booking id (elided) ...
+        con.execute(
+            "INSERT INTO bookings "
+            "(booking_id, flight_id, passenger, miles_applied, status) "
+            "VALUES (?, ?, ?, ?, 'confirmed')",
+            (booking_id, flight_id, passenger, miles_to_apply),
+        )
+        con.commit()
+        return {"booking_id": booking_id, "flight_id": flight_id,
+                "passenger": passenger, "miles_applied": miles_to_apply,
+                "status": "confirmed"}
+    finally:
+        con.close()</code></pre>
+</details>
 
 <div class="card">
   <strong>The takeaway.</strong> MCP composes real systems live (Beat A). The same
