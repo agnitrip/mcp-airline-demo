@@ -119,9 +119,9 @@
   .tool.err .mcp-tag{color:var(--bad);background:rgba(255,128,149,.12);border-color:rgba(255,128,149,.35)}
   .sys{font-size:11.5px;color:var(--muted)}
   .sys b{color:var(--ink);font-weight:600}
-  .composer-row{display:flex;gap:8px;margin:8px 0 2px}
+  .composer-row{display:flex;gap:8px;margin:8px 0 2px;align-items:flex-start}
   .composer-in{flex:1;min-width:0;background:var(--code);border:1px solid var(--line);border-radius:9px;
-    padding:9px 11px;color:var(--ink);font:14px/1.4 inherit}
+    padding:9px 11px;color:var(--ink);font:14px/1.4 inherit;resize:none}
   .composer-in:focus{outline:none;border-color:var(--accent)}
   .composer-send{background:var(--accent);color:#0b0e1a;border:0;border-radius:9px;
     padding:9px 14px;font:700 13px/1 inherit;cursor:pointer;white-space:nowrap}
@@ -680,15 +680,15 @@ or as the first message in Claude Code):</p>
       // first user message: prefill a composer and wait for the user to send it
       if(step.t==="user" && step.send){
         var crow=el("div","row composer-row");
-        var inp=document.createElement("input");
-        inp.type="text"; inp.className="composer-in"; inp.value=step.text;
+        var inp=document.createElement("textarea");
+        inp.rows=2; inp.className="composer-in"; inp.value=step.text;
         inp.setAttribute("aria-label","Your message");
         var snd=el("button","composer-send","Send ➤");
         crow.appendChild(inp); crow.appendChild(snd);
         screen.appendChild(crow);
         var hint=el("div","composer-hint","Press Send (or Enter) to send your message.");
         screen.appendChild(hint); scrollDown();
-        if(!reduced){ try{ inp.focus(); }catch(e){} }
+        if(!reduced){ try{ inp.focus(); inp.setSelectionRange(0,0); inp.scrollTop=0; }catch(e){} }
         var sent=false;
         function doSend(){
           if(sent||token!==runToken) return; sent=true;
