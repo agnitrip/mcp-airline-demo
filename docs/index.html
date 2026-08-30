@@ -168,6 +168,9 @@
   .lwire.sm{font-size:10px;padding:0;opacity:.85}
   .lnode.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(110,168,254,.35);background:rgba(110,168,254,.12)}
   .lnode.err{border-color:var(--bad);box-shadow:0 0 0 2px rgba(255,128,149,.35);background:rgba(255,128,149,.12)}
+  .tok{border-radius:4px;padding:0 3px;transition:background .2s,box-shadow .2s,color .2s}
+  .tok.hot{background:rgba(110,168,254,.28);color:#fff;box-shadow:0 0 0 1px rgba(110,168,254,.6)}
+  .tok.hoterr{background:rgba(255,128,149,.26);color:#fff;box-shadow:0 0 0 1px rgba(255,128,149,.6)}
   .arch-toggle{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;cursor:pointer}
   .arch-toggle input{accent-color:var(--accent);margin:0}
   @media (max-width:980px){ .showcase{grid-template-columns:1fr} .showcase-arch{position:static} }
@@ -336,28 +339,28 @@ current ↔ stale. The RAG version of the stale-source failure.</p>
       <div class="lane">
         <div class="lnode server" data-node="reservations"><span class="ntype">MCP Server</span>
           <div class="lname">reservations</div><div class="lsub">purpose-built · Python</div>
-          <div class="lsub tools">search_flights · book_flight</div></div>
+          <div class="lsub tools"><span class="tok" data-tool="search_flights">search_flights</span> · <span class="tok" data-tool="book_flight">book_flight</span></div></div>
         <div class="lwire sm">↓ reads / writes</div>
         <div class="lnode db" data-node="reservations"><span class="ntype">Database · SQLite</span>
-          <div class="lname">reservations.db</div><div class="lsub">flights · airports · bookings</div></div>
+          <div class="lname">reservations.db</div><div class="lsub"><span class="tok" data-table="flights">flights</span> · <span class="tok" data-table="airports">airports</span> · <span class="tok" data-table="bookings">bookings</span></div></div>
       </div>
 
       <div class="lane">
         <div class="lnode server" data-node="loyalty"><span class="ntype">MCP Server</span>
           <div class="lname">loyalty</div><div class="lsub">purpose-built · Python</div>
-          <div class="lsub tools">check_miles</div></div>
+          <div class="lsub tools"><span class="tok" data-tool="check_miles">check_miles</span></div></div>
         <div class="lwire sm">↓ reads</div>
         <div class="lnode db" data-node="loyalty"><span class="ntype">Database · SQLite</span>
-          <div class="lname">loyalty.db</div><div class="lsub">members · miles · tier</div></div>
+          <div class="lname">loyalty.db</div><div class="lsub"><span class="tok" data-table="members">members</span> · miles · tier</div></div>
       </div>
 
       <div class="lane">
         <div class="lnode server" data-node="policies"><span class="ntype">MCP Server</span>
           <div class="lname">policies</div><div class="lsub">purpose-built · Python</div>
-          <div class="lsub tools">search_policies</div></div>
+          <div class="lsub tools"><span class="tok" data-tool="search_policies">search_policies</span></div></div>
         <div class="lwire sm">↓ reads</div>
         <div class="lnode fs" data-node="policies"><span class="ntype">File store</span>
-          <div class="lname">policy/active/</div><div class="lsub">refund · baggage (.md)</div></div>
+          <div class="lname">policy/active/</div><div class="lsub"><span class="tok" data-table="refund">refund</span> · <span class="tok" data-table="baggage">baggage</span> (.md)</div></div>
       </div>
       </div>
     </div>
@@ -595,14 +598,32 @@ or as the first message in Claude Code):</p>
     var live = document.getElementById("archLive"); if(!live) return;
     var ns = live.querySelectorAll(".lnode");
     for(var j=0;j<ns.length;j++){ ns[j].classList.remove("active","err"); }
+    var tk = live.querySelectorAll(".tok.hot,.tok.hoterr");
+    for(var m=0;m<tk.length;m++){ tk[m].classList.remove("hot","hoterr"); }
   }
-  // highlight every box in a lane (server + its backend share data-node)
-  function archHit(name, isErr){
+  // which table(s) each tool actually touches (second-level highlight)
+  var TOOLMAP = {
+    search_flights:  ["flights","airports"],
+    book_flight:     ["bookings"],
+    check_miles:     ["members"],
+    search_policies: ["refund","baggage"]
+  };
+  // highlight every box in a lane (server + its backend share data-node),
+  // then the specific tool chip and the table(s) that call reaches
+  function archHit(name, isErr, tool){
     if(!animArchEl || !animArchEl.checked || !name) return;
     archClearAll();
     var live = document.getElementById("archLive"); if(!live) return;
     var els = live.querySelectorAll('[data-node="'+name+'"]');
     for(var k=0;k<els.length;k++){ els[k].classList.add(isErr?"err":"active"); }
+    if(tool){
+      var hot = isErr ? "hoterr" : "hot";
+      var te = live.querySelector('[data-tool="'+tool+'"]'); if(te) te.classList.add(hot);
+      var tables = TOOLMAP[tool] || [];
+      for(var t=0;t<tables.length;t++){
+        var db = live.querySelector('[data-table="'+tables[t]+'"]'); if(db) db.classList.add(hot);
+      }
+    }
   }
   if(animArchEl){ animArchEl.addEventListener("change", function(){ if(!animArchEl.checked) archClearAll(); }); }
 
@@ -713,7 +734,8 @@ or as the first message in Claude Code):</p>
         top.appendChild(sys); box.appendChild(top);
         var hd=el("div","hd","→ "+step.act);
         var res=el("span","res"); box.appendChild(hd); box.appendChild(res);
-        row.appendChild(box); screen.appendChild(row); scrollDown(); archHit(step.server, step.err);
+        row.appendChild(box); screen.appendChild(row); scrollDown();
+        archHit(step.server, step.err, (step.act||"").split(":")[0].trim());
         if(reduced){ res.textContent=step.res; if(step.err){box.classList.add("err");hd.textContent="✕ "+step.act;} return done(); }
         res.appendChild(el("span","spin"));
         setTimeout(function(){
