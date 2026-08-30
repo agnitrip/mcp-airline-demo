@@ -709,6 +709,7 @@ or as the first message in Claude Code):</p>
         screen.appendChild(crow);
         var hint=el("div","composer-hint","Press Send (or Enter) to send your message.");
         screen.appendChild(hint); scrollDown();
+        archHit("user");  // light the USER node while the traveler is composing
         if(!reduced){ try{ inp.focus(); inp.setSelectionRange(0,0); inp.scrollTop=0; }catch(e){} }
         var sent=false;
         function doSend(){
