@@ -368,10 +368,9 @@ current ↔ stale — the RAG version of the stale-source failure.</p>
 the demo, and the source of both failures.</p>
 
 <div class="card">
-  <strong>The takeaway.</strong> MCP makes it easy to compose real systems (Beat A). The same
+  <strong>The takeaway.</strong> MCP composes real systems live (Beat A). The same
   flexibility means a stale source (B) or an unhandled tool error (C) produces a confident wrong answer.
-  The fix is not more servers — it's a rule: <em>quote your source, fail closed</em> (D). A system
-  prompt here; code in production.
+  The fix is a rule: <em>quote your source, fail closed</em> (D). A system prompt here; code in production.
 </div>
 
 <p class="cap">Want to run this for real on your machine? → open the <strong>Run it yourself</strong> tab above.</p>
@@ -513,7 +512,7 @@ or as the first message in Claude Code):</p>
   var BEATS = {
     A: {
       state: {res:["CURRENT","good"], loy:["healthy","good"], asst:["no guardrail","warn"]},
-      point: {cls:"good", text:"Three purpose-built servers composed live — and it confirmed before booking."},
+      point: {cls:"good", text:"Two purpose-built servers composed live, and it confirmed before booking."},
       steps: [
         {t:"user", text:REQ},
         {t:"tool", server:"reservations", act:"search_flights — weekend flights + airport weather",
@@ -545,7 +544,7 @@ or as the first message in Claude Code):</p>
     },
     C: {
       state: {res:["CURRENT","good"], loy:["BROKEN","bad"], asst:["no guardrail","warn"]},
-      point: {cls:"bad", text:"You want fail closed, not fail open — there's money on the line."},
+      point: {cls:"bad", text:"With money on the line, you want it to fail closed and refuse."},
       steps: [
         {t:"note", text:"You ran ./scripts/break-miles.sh — the loyalty DB was swapped for a non-database file."},
         {t:"user", text:REQ},
