@@ -447,13 +447,21 @@ There's nothing to install on a phone. macOS, Linux, and Windows all work.</div>
 <div class="note" style="border-left-color:var(--accent);background:rgba(110,168,254,.08)">
   <strong>Prefer to watch first?</strong> Here is a real run: three real MCP servers over stdio, a real
   model, and live tool calls (not the simulation above). It plays all four beats end to end.
+  <br><br>
+  <strong>One note on provenance.</strong> This was recorded in August 2026, so the dates on screen are
+  <code>2026-08-22</code> and <code>2026-08-17</code> rather than the October weekend in the tables above.
+  The seed data was re-dated on 2026-10-18; the recording was not. The behaviour it shows is unchanged,
+  since the trap depends on the snapshot being five days older than "today," not on the specific dates.
 </div>
 <video controls preload="metadata" poster="airline-demo-real-run-poster.jpg"
        style="width:100%;max-width:940px;display:block;margin:14px auto 6px;border:1px solid var(--line);border-radius:12px;background:#000">
   <source src="airline-demo-real-run.mp4" type="video/mp4">
   Your browser can’t play embedded video. <a href="airline-demo-real-run.mp4">Download the MP4</a>.
 </video>
-<p class="cap" style="text-align:center;margin-top:4px">Real MCP host session · Claude Sonnet 4.6 · synthetic data · ~2 min. reservations · loyalty · policies.</p>
+<p class="cap" style="text-align:center;margin-top:4px">Real MCP host session · Claude Sonnet 4.6 · synthetic data · ~2 min · recorded 2026-08-30. reservations · loyalty · policies.</p>
+<p class="cap" style="text-align:center;margin-top:2px">The first half runs the naive assistant, which books the stale-weather flight. The second half runs the
+<strong>guardrailed</strong> prompt, which catches the stale snapshot and refuses. Both are in the recording, so watch the
+prompt in use before reading a beat as a pass or a fail.</p>
 
 <h2>Prerequisites</h2>
 <ul>
