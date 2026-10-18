@@ -14,3 +14,7 @@ policy/active/*.md
 # OS junk
 .DS_Store
 **/.DS_Store
+
+# python bytecode (servers/_verify_beats.py imports data/seed.py)
+__pycache__/
+*.pyc

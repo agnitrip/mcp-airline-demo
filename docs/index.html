@@ -243,11 +243,11 @@ can see. Follow these rows through the simulator below.</p>
 <div class="tablewrap">
 <table>
   <tr><th>flight_id</th><th>airline</th><th>route</th><th>date</th><th>price_usd</th><th>seats_left</th></tr>
-  <tr><td><b>AA88</b></td><td>American</td><td>SJC → SAN (San Diego)</td><td>2026-08-22</td><td>149</td><td>9</td></tr>
-  <tr><td>UA210</td><td>United</td><td>SJC → SEA (Seattle)</td><td>2026-08-22</td><td>118</td><td>4</td></tr>
-  <tr><td><b>DL455</b></td><td>Delta</td><td>SJC → PHX (Phoenix)</td><td>2026-08-23</td><td>129</td><td>6</td></tr>
-  <tr><td>WN360</td><td>Southwest</td><td>SJC → LAS (Las Vegas)</td><td>2026-08-22</td><td>176</td><td>12</td></tr>
-  <tr><td>AS512</td><td>Alaska</td><td>SJC → PSP (Palm Springs)</td><td>2026-08-23</td><td>169</td><td>3</td></tr>
+  <tr><td><b>AA88</b></td><td>American</td><td>SJC → SAN (San Diego)</td><td>2026-10-24</td><td>149</td><td>9</td></tr>
+  <tr><td>UA210</td><td>United</td><td>SJC → SEA (Seattle)</td><td>2026-10-24</td><td>118</td><td>4</td></tr>
+  <tr><td><b>DL455</b></td><td>Delta</td><td>SJC → PHX (Phoenix)</td><td>2026-10-25</td><td>129</td><td>6</td></tr>
+  <tr><td>WN360</td><td>Southwest</td><td>SJC → LAS (Las Vegas)</td><td>2026-10-24</td><td>176</td><td>12</td></tr>
+  <tr><td>AS512</td><td>Alaska</td><td>SJC → PSP (Palm Springs)</td><td>2026-10-25</td><td>169</td><td>3</td></tr>
 </table>
 </div>
 <p class="cap">Cheapest overall is Seattle ($118), but it's raining. <b>AA88 → San Diego ($149)</b> is the
@@ -257,17 +257,17 @@ cheapest that's actually sunny. <b>DL455 → Phoenix ($129)</b> is the trap in B
 <div class="tablewrap">
 <table>
   <tr><th>code</th><th>city</th><th>weather</th><th>weather_as_of</th></tr>
-  <tr><td>SJC</td><td>San Jose</td><td>Cloudy</td><td>2026-08-22</td></tr>
-  <tr><td>SAN</td><td>San Diego</td><td><span class="ok">Sunny</span></td><td>2026-08-22</td></tr>
-  <tr><td>SEA</td><td>Seattle</td><td>Rain</td><td>2026-08-22</td></tr>
-  <tr><td>PHX</td><td>Phoenix</td><td><span class="bad">Storm</span></td><td>2026-08-22</td></tr>
-  <tr><td>LAS</td><td>Las Vegas</td><td><span class="ok">Sunny</span></td><td>2026-08-22</td></tr>
-  <tr><td>PSP</td><td>Palm Springs</td><td><span class="ok">Sunny</span></td><td>2026-08-22</td></tr>
+  <tr><td>SJC</td><td>San Jose</td><td>Cloudy</td><td>2026-10-24</td></tr>
+  <tr><td>SAN</td><td>San Diego</td><td><span class="ok">Sunny</span></td><td>2026-10-24</td></tr>
+  <tr><td>SEA</td><td>Seattle</td><td>Rain</td><td>2026-10-24</td></tr>
+  <tr><td>PHX</td><td>Phoenix</td><td><span class="bad">Storm</span></td><td>2026-10-24</td></tr>
+  <tr><td>LAS</td><td>Las Vegas</td><td><span class="ok">Sunny</span></td><td>2026-10-24</td></tr>
+  <tr><td>PSP</td><td>Palm Springs</td><td><span class="ok">Sunny</span></td><td>2026-10-24</td></tr>
 </table>
 </div>
 <p class="cap">This is the <b>current</b> snapshot: Phoenix is a <span class="bad">Storm</span> today. The
 <b>stale</b> snapshot (Beat B) is the same table frozen 5 days ago. Every <code>weather_as_of</code> reads
-<code>2026-08-17</code> and Phoenix still says <span class="warn">Sunny</span>. Same data, older date → wrong answer.</p>
+<code>2026-10-19</code> and Phoenix still says <span class="warn">Sunny</span>. Same data, older date → wrong answer.</p>
 
 <h3><code>reservations</code> · SQLite → <code>bookings</code></h3>
 <div class="tablewrap">
@@ -605,14 +605,14 @@ or as the first message in Claude Code):</p>
         {t:"note", text:"You ran ./scripts/use-stale.sh. Reservations now serves a snapshot from 5 days ago."},
         {t:"user", text:REQ},
         {t:"tool", server:"reservations", act:"search_flights: weekend flights + airport weather",
-         res:"PHX $129 Sunny (weather_as_of 2026-08-17) · SAN $149 Sunny · SEA $118 Rain · …"},
+         res:"PHX $129 Sunny (weather_as_of 2026-10-19) · SAN $149 Sunny · SEA $118 Rain · …"},
         {t:"think", text:"cheapest sunny → Phoenix $129."},
         {t:"tool", server:"loyalty", act:"check_miles: Jordan Rivera", res:"45,000 miles · Gold  ✓"},
         {t:"answer", cls:"", text:"Here's what I found: DL455 to Phoenix, showing sunny, $129, and I can apply 12,000 miles. Shall I book it?"},
         {t:"choice"},
         {t:"tool", server:"reservations", act:"book_flight: DL455 → BKG-6002", res:"confirmed  ✓"},
         {t:"answer", cls:"bad", text:"Booked DL455 to Phoenix, sunny, $129, 12,000 miles applied."},
-        {t:"reality", text:"Reality: Phoenix is under a storm. The weather field was 5 days stale (weather_as_of 2026-08-17), and the confirmation didn't save you, because you approved the same stale “Sunny.” Right reasoning, dead source."}
+        {t:"reality", text:"Reality: Phoenix is under a storm. The weather field was 5 days stale (weather_as_of 2026-10-19), and the confirmation didn't save you, because you approved the same stale “Sunny.” Right reasoning, dead source."}
       ]
     },
     C: {
@@ -640,9 +640,9 @@ or as the first message in Claude Code):</p>
         {t:"divider", text:"Re-run B: stale weather"},
         {t:"user", text:REQ},
         {t:"tool", server:"reservations", act:"search_flights: weekend flights + airport weather",
-         res:"PHX $129 Sunny, weather_as_of 2026-08-17"},
+         res:"PHX $129 Sunny, weather_as_of 2026-10-19"},
         {t:"guard", text:"weather_as_of is 5 days old (> 2-day limit) → STALE. Cannot rely on it."},
-        {t:"answer", cls:"good", text:"NOT BOOKED. Phoenix weather is 5 days stale (reservations, as_of 2026-08-17). I won't book on unverified conditions. Refresh the snapshot or confirm current weather."},
+        {t:"answer", cls:"good", text:"NOT BOOKED. Phoenix weather is 5 days stale (reservations, as_of 2026-10-19). I won't book on unverified conditions. Refresh the snapshot or confirm current weather."},
         {t:"divider", text:"Re-run C: loyalty error"},
         {t:"user", text:REQ},
         {t:"tool", server:"loyalty", act:"check_miles: Jordan Rivera", err:true, res:"✕ ERROR: file is not a database"},

@@ -23,24 +23,60 @@ Idempotent: drops and recreates every table on each run.
 """
 
 import sqlite3
+from datetime import date, timedelta
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-TODAY = "2026-08-22"          # demo "today" (this weekend = 22-23 Aug 2026)
-FIVE_DAYS_AGO = "2026-08-17"  # the stale snapshot's weather_as_of
+TODAY = "2026-10-24"          # demo "today" (this weekend = 24-25 Oct 2026)
+FIVE_DAYS_AGO = "2026-10-19"  # the stale snapshot's weather_as_of
 
 # --- Flights out of San Jose (SJC) this weekend -----------------------------
 # Same rows in BOTH snapshots. What differs between snapshots is the WEATHER
 # (airports table), not the flights.
 #   flight_id, airline,     origin, destination, date,        price_usd, seats_left
 FLIGHTS = [
-    ("AA88",  "American",  "SJC", "SAN", "2026-08-22", 149, 9),   # San Diego  <- correct pick (cheapest genuinely sunny)
-    ("UA210", "United",    "SJC", "SEA", "2026-08-22", 118, 4),   # Seattle    (cheapest overall, but RAIN)
-    ("DL455", "Delta",     "SJC", "PHX", "2026-08-23", 129, 6),   # Phoenix    (cheap; STORM now, but "Sunny" in stale snapshot -> Beat B trap)
-    ("WN360", "Southwest", "SJC", "LAS", "2026-08-22", 176, 12),  # Las Vegas  (sunny but pricier)
-    ("AS512", "Alaska",    "SJC", "PSP", "2026-08-23", 169, 3),   # Palm Springs (sunny but pricier)
+    ("AA88",  "American",  "SJC", "SAN", "2026-10-24", 149, 9),   # San Diego  <- correct pick (cheapest genuinely sunny)
+    ("UA210", "United",    "SJC", "SEA", "2026-10-24", 118, 4),   # Seattle    (cheapest overall, but RAIN)
+    ("DL455", "Delta",     "SJC", "PHX", "2026-10-25", 129, 6),   # Phoenix    (cheap; STORM now, but "Sunny" in stale snapshot -> Beat B trap)
+    ("WN360", "Southwest", "SJC", "LAS", "2026-10-24", 176, 12),  # Las Vegas  (sunny but pricier)
+    ("AS512", "Alaska",    "SJC", "PSP", "2026-10-25", 169, 3),   # Palm Springs (sunny but pricier)
 ]
+
+
+def _check_demo_dates() -> None:
+    """Guard the two invariants the beats depend on, so a re-date cannot slip.
+
+    Re-dating this file means editing TODAY, FIVE_DAYS_AGO and the FLIGHTS rows
+    together. Miss one and a beat breaks quietly on stage: the stale snapshot
+    stops reading as 5 days old, or Phoenix moves off the Sunday.
+    """
+    today = date.fromisoformat(TODAY)
+    stale = date.fromisoformat(FIVE_DAYS_AGO)
+    saturday, sunday = today, today + timedelta(days=1)
+
+    # Beat B narration says the snapshot is five days old. It has to be.
+    assert today - stale == timedelta(days=5), (
+        f"FIVE_DAYS_AGO ({FIVE_DAYS_AGO}) must be exactly 5 days before "
+        f"TODAY ({TODAY}); it is {(today - stale).days}"
+    )
+    # "this weekend" has to actually be a weekend.
+    assert today.weekday() == 5, f"TODAY ({TODAY}) must be a Saturday"
+
+    by_id = {f[0]: f[4] for f in FLIGHTS}
+    for flight_id, flown in by_id.items():
+        assert flown in (saturday.isoformat(), sunday.isoformat()), (
+            f"{flight_id} is dated {flown}, outside the demo weekend "
+            f"{saturday.isoformat()}/{sunday.isoformat()}"
+        )
+    # Beat B's climax books Phoenix. It is the Sunday flight.
+    assert by_id["DL455"] == sunday.isoformat(), (
+        f"DL455 (Phoenix) must stay on the Sunday ({sunday.isoformat()}); "
+        f"it is dated {by_id['DL455']}"
+    )
+
+
+_check_demo_dates()
 
 # --- Airports + weather. This is the ONLY thing that changes between the -----
 #     current and stale snapshots. -----------------------------------------

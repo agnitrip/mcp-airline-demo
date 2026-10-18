@@ -208,9 +208,17 @@ Start a **new chat** for each beat.
 Then switch the assistant instructions back to `prompts/assistant-base.md`.
 
 ## Notes
-- All dates are a fixed synthetic "today" = **2026-08-22** (weekend of 22–23 Aug
-  2026). To re-date, edit `TODAY`/`FIVE_DAYS_AGO` in `data/seed.py` and the date
-  line in `prompts/assistant-guardrailed.md`, then re-run `setup.sh`.
+- All dates are a fixed synthetic "today" = **2026-10-24** (weekend of 24–25 Oct
+  2026). To re-date, edit `TODAY`/`FIVE_DAYS_AGO` **and the `FLIGHTS` rows** in
+  `data/seed.py`, the date line in `prompts/assistant-guardrailed.md`, the
+  `weather_as_of` assertion in `servers/_smoke_test.py`, and the data tables in
+  `docs/index.html`, then re-run `setup.sh`. `seed.py` asserts the invariants the
+  beats depend on (`FIVE_DAYS_AGO` exactly 5 days back, `TODAY` a Saturday,
+  Phoenix on the Sunday) and refuses to seed if a re-date misses one. Then run
+  `uv run --with "mcp[cli]<2" servers/_verify_beats.py`, which drives the real
+  servers and checks the part dates alone cannot guarantee: that San Diego is
+  still the cheapest sunny pick on the current snapshot and that it still flips
+  to Phoenix on the stale one.
 - Generated `.db` files are gitignored; `./scripts/setup.sh` regenerates them
   from [`data/seed.py`](data/seed.py) (Python stdlib only, no dependencies).
 

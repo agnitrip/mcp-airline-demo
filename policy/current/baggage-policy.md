@@ -1,6 +1,6 @@
 # Baggage Rules
 
-**Version:** 2026.3  **Status:** CURRENT — in force  **Last updated:** 2026-08-19
+**Version:** 2026.3  **Status:** CURRENT — in force  **Last updated:** 2026-10-21
 **Owner:** Airport Operations
 
 ## Carry-on

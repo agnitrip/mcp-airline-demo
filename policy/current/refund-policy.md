@@ -1,6 +1,6 @@
 # Fare Rules — Refunds & Changes
 
-**Version:** 2026.3  **Status:** CURRENT — in force  **Last updated:** 2026-08-19
+**Version:** 2026.3  **Status:** CURRENT — in force  **Last updated:** 2026-10-21
 **Owner:** Revenue Management
 
 This document is read at request time by the booking assistant. Changing it

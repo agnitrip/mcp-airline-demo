@@ -109,8 +109,8 @@ async def test_reservations():
             phx = {f["flight_id"]: f for f in flights}["DL455"]
             check("Beat B: after use-stale.sh, PHX reads Sunny (the trap)",
                   phx["weather"] == "Sunny")
-            check("Beat B: PHX weather_as_of is 2026-08-17 (5 days stale)",
-                  phx["weather_as_of"] == "2026-08-17")
+            check("Beat B: PHX weather_as_of is 2026-10-19 (5 days stale)",
+                  phx["weather_as_of"] == "2026-10-19")
             sh("use-current.sh")
 
 
